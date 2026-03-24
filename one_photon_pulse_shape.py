@@ -7,44 +7,22 @@ from tqdm import tqdm
 from simulation_functions import *
 
 if __name__ == "__main__":
-    # raw data on res
-    t_raw_us= np.array([0.        , 0.02727273, 0.05454545, 0.08181818, 0.10909091,
-       0.13636364, 0.16363636, 0.19090909, 0.21818182, 0.24545455,
-       0.27272727, 0.3       ]),
-
-    pop_avg_raw= np.array([0.007218251193264217, 0.07522068434528818, 0.27351518028631533, 
-        0.5334829295277013, 0.801381491260522, 0.9358372210313958, 
-        0.8418133567975138, 0.6128245196916823, 0.31440830735719383, 
-        0.13100533413670276, 0.03446727696389848, 0.1397543101734671])
-    
-    # raw data 5MHz detuned
-    # t_raw_us= np.array([0.  , 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1 ,
-    #    0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2 , 0.21,
-    #    0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.3 ])
-
-    # pop_avg_raw=np.array([0.01215464554673015, 0.014655686947439102, 0.037922786309883084, 
-    #                     0.08492874990406181, 0.12538398157733505, 0.14875453371038413,
-    #                     0.19171904506891402, 0.21102177615794582, 0.21197614738259493, 
-    #                     0.20019653549065314, 0.18369942762095787, 0.15096029843253678, 
-    #                     0.09824514449986849, 0.06309188581263286, 0.026059112639586417, 
-    #                     0.01183442594940693, 0.010750569651698676, 0.022536023299094064, 
-    #                     0.03210180443526232, 0.08650610451372473, 0.1322141383429254, 
-    #                     0.15385858977778855, 0.18613193369262693, 0.21471766947020343, 
-    #                     0.22621477782233076, 0.17064615681781267, 0.1903908150467581, 
-    #                     0.186064703817872, 0.15758128982514602, 0.1019319389542577, 
-    #                     0.0767776308937227])
-
+    B_field_G    = 20   # bias field magnitude [G]
+    detunings    = [2*PI * 5e6, 0.0, 0.0]   # laser is on resonance with each beam's target sublevel
+    T_MAX        = 1e-6
+    t_push       = 0.0e-6
+    N_atoms      = 50
+    sigma_aom = 9e-9
 
 
 
 
 
     w0, w1, w2       = 0.5e-3, 0.9e-3, 0.9e-3    # beam 1/e^2 radii [m]
-    wa_x, wa_y, wa_z = 35e-6, 35e-6, 100e-6       # cloud 1-sigma radii [m]
-    tx, ty, tz       = 5e-6, 5e-6, 5e-6            # cloud temperatures [K]
+    wa_x, wa_y, wa_z = 30e-6, 0e-6, 0e-6       # cloud 1-sigma radii [m]
+    tx, ty, tz       = 0e-6, 0e-6, 0e-6            # cloud temperatures [K]
 
-    V_pd = 70
-    P_689 = (0.5 + 0.229 * V_pd) * 1e-3
+    P_689 = 10e-3 # peak power
     P_688 = 0.0     # off for single-photon dynamics
     P_679 = 0.0
 
@@ -74,28 +52,35 @@ if __name__ == "__main__":
     mJ_targets = (+1, 0, 0) 
 
     # --- Zeeman detuning ---
-    B_field_G = 20   # bias field magnitude [G]
     B_field_T = B_field_G * 1e-4
     delta_zeeman_689 = get_zeeman_detuning(G_J_3P1, mJ_targets[0], B_field_T)
     print(f"Zeeman shift (mJ={mJ_targets[0]:+d}): "
           f"2pi x {delta_zeeman_689/(2*PI)*1e-3:.1f} kHz at B = {B_field_G:.1f} G")
 
-    detunings = [0.0, 0.0, 0.0]   # laser is on resonance with each beam's target sublevel
+    
 
-    N_atoms = 50
 
     # Sample ensemble; atleast_2d ensures shape (N, 3) for vectorized functions
     pos, vel = sample_atomic_ensemble([wa_x, wa_y, wa_z], [tx, ty, tz], n_samples=N_atoms)
     pos = np.atleast_2d(pos)
     vel = np.atleast_2d(vel)
 
-    T_MAX = 0.35e-6
+
 
     # Simulate and plot 1-photon Rabi flopping
     tlist, avg_pop = simulate_one_photon_rabi_dynamics(
         pos, vel, beam_radii, powers, detunings, k_vecs,
         pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9
     )
+
+    # Realistic AOM pulse: ramp starts at t=0, ramp down starts at t=T_MAX
+    aom_params = {"t0": 0.0, "sigma": sigma_aom, "t_pulse": T_MAX}
+    _, avg_pop_aom = simulate_one_photon_rabi_dynamics(
+        pos, vel, beam_radii, powers, detunings, k_vecs,
+        pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9,
+        aom_params=aom_params
+    )
+
     _, avg_pop_ideal = simulate_one_photon_rabi_dynamics(
         np.zeros((1, 3)), np.zeros((1, 3)), beam_radii, powers, detunings, k_vecs,
         pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9
@@ -110,9 +95,10 @@ if __name__ == "__main__":
     pop_theory   = (Omega_theory**2 / Omega_eff**2) * (0.5 - 0.5 * np.cos(Omega_eff * tlist) * decay_env)
 
     # Readout model
-    t_push          = 0.8e-6
-    avg_pop_meas    = apply_readout(avg_pop,    t_push)
-    pop_theory_meas = apply_readout(pop_theory, t_push)
+    
+    avg_pop_meas     = apply_readout(avg_pop,     t_push)
+    avg_pop_aom_meas = apply_readout(avg_pop_aom, t_push)
+    # pop_theory_meas  = apply_readout(pop_theory,  t_push)
     avg_pop_meas_ideal = apply_readout(avg_pop_ideal, t_push)
 
     I_peak          = 2 * P_689 * 100 / (PI * w0**2)           # peak intensity [uW/cm^2]
@@ -146,17 +132,50 @@ if __name__ == "__main__":
     print(f"    Max observable population:     {peak_excitation * readout_fidelity:.4f}")
     print("=" * 55)
 
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.plot(tlist * 1e6, avg_pop_meas,    color='C0', label='Simulation')
-    ax.plot(tlist * 1e6, avg_pop_meas_ideal,    color='C1', label='Ideal')
-    # ax.plot(tlist * 1e6, pop_theory_meas, color='C2', linestyle='--', label='Theory')
-    ax.scatter(t_raw_us, pop_avg_raw, color='C3', label='Raw Data')
+    # Pulse-shape panels: show full envelope for t_pulse = 1x, 2x, 5x sigma
 
-    ax.set_xlabel("Time [us]")
-    ax.set_ylabel("Excited state population")
-    ax.set_title("689 nm Single-Photon Rabi Flopping")
-    # ax.set_ylim(0, 1)
+    t_us        = tlist * 1e6
+    pulse_cases = [(1, '1σ'), (2, '2σ'), (5, '5σ ')]
 
-    plt.legend()
+    # Layout: 3 pulse-shape panels on top, main Rabi plot spanning full width below
+    fig = plt.figure(figsize=(10, 6))
+    gs  = fig.add_gridspec(2, 3, height_ratios=[1, 2.5], hspace=0.5, wspace=0.35)
+
+    ax_b    = fig.add_subplot(gs[0, 0])
+    ax_m    = fig.add_subplot(gs[0, 1])
+    ax_e    = fig.add_subplot(gs[0, 2])
+    ax_main = fig.add_subplot(gs[1, :])
+
+    for ax_p, (n, title) in zip([ax_b, ax_m, ax_e], pulse_cases):
+        t_pulse_i  = n * sigma_aom
+        t_end      = 6 * sigma_aom + t_pulse_i          # 3σ rise + plateau + 3σ fall
+        t_panel    = np.linspace(0, t_end, 500)
+        coeff_p, _ = aom_rabi_envelope(t0=0.0, sigma=sigma_aom,
+                                       t_pulse=t_pulse_i, Omega_peak=1.0)
+        env_p      = np.array([coeff_p(t) for t in t_panel])
+        ax_p.plot(t_panel * 1e9, env_p, color='C1')
+        ax_p.fill_between(t_panel * 1e9, env_p, alpha=0.2, color='C1')
+        ax_p.set_title(f't_pulse = {title}', fontsize=9)
+        ax_p.set_xlabel('Time [ns]', fontsize=8)
+        ax_p.set_ylabel(r'$\Omega(t)/\Omega_0$', fontsize=8)
+        ax_p.set_ylim(0, 1.15)
+        ax_p.tick_params(labelsize=7)
+
+    # Main Rabi flop plot
+    ax_main.plot(t_us, avg_pop_meas,       color='C0', label='Square pulse')
+    ax_main.plot(t_us, avg_pop_aom_meas,   color='C1', linestyle='--',
+                 label=rf'AOM pulse ($\sigma$ = {sigma_aom*1e9} ns)')
+    # ax_main.plot(t_us, avg_pop_meas_ideal, color='C2', label='Ideal')
+    # ax_main.plot(t_us, pop_theory_meas, color='C3', linestyle='--', label='Theory')
+    # ax_main.scatter(t_raw_us, pop_avg_raw, color='C4', label='Raw Data')
+
+    ax_main.set_xlabel("Time [us]")
+    ax_main.set_ylabel("Excited state population")
+    ax_main.set_title("689 nm Single-Photon Rabi Flopping")
+    # ax_main.set_ylim(0, 1)
+    ax_main.legend()
+
     plt.tight_layout()
     plt.show()
+
+
