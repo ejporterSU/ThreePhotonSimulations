@@ -1,2 +1,2 @@
 # ThreePhotonSimulations
-Simulations for 3-photon experiments in Kasevich Group at Stanford
+Simulations, data analysis, and figure prep for sequential three photon paper in Kasevich Group at Stanford
