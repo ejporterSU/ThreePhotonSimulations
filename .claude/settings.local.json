@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -c \"import numpy; print\\(''numpy:'', numpy.__version__\\)\")",
+      "Bash(python -c \"import matplotlib; print\\(''matplotlib:'', matplotlib.__version__\\)\")",
+      "Bash(where python:*)",
+      "Bash(conda env:*)",
+      "Bash(python -c \":*)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Erik\\Desktop\\Kasevich Lab\\Plots\\Sequential3v_Figures"
+    ]
+  }
+}
