@@ -337,6 +337,10 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
     N_atoms = positions.shape[0]
     n_steps = int(t_max / dt) + 1
     tlist   = np.linspace(0, t_max, n_steps)
+    tlist_sim = tlist
+    if aom_params is not None:
+        tlist_sim   = np.linspace(-100e-9, t_max+100e-9, int((t_max + 200e-9) / dt) + 1)
+    
 
     # Two-level system operators
     g      = qt.basis(2, 0)
@@ -368,7 +372,7 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
         else:
             H_sys = (rabi * qt.sigmax() - delta * qt.sigmaz()) / 2
 
-        result = qt.mesolve(H_sys, rho0, tlist, c_ops, [proj_e])
+        result = qt.mesolve(H_sys, rho0, tlist_sim, c_ops, [proj_e])
         avg_population += result.expect[0]
 
     return tlist, avg_population / N_atoms
@@ -380,31 +384,26 @@ def aom_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
     the Rabi frequency envelope shaped by the measured AOM rise (and fall).
 
     The intensity profile is two back-to-back erf steps:
-        turn-on  starts at t0            (intensity ~ 0 at t0)
-        turn-off starts at t0 + t_pulse  (intensity ~ 1 at t0 + t_pulse)
-
-    Internally the erf 50%-points are offset by 3*sigma from these edges:
-        t_on_50  = t0 + 3*sigma
-        t_off_50 = t0 + 3*sigma + t_pulse
+        turn-on  at  t_on  = t0
+        turn-off at  t_off = t0 + t_pulse
 
     Rabi frequency:
         Omega(t) = Omega_peak * sqrt( I(t) )
     where
-        I(t) = 0.5*(1 + erf((t - t_on_50 ) / sigma))   <- rise
-             * 0.5*(1 - erf((t - t_off_50) / sigma))   <- fall  (same sigma)
+        I(t) = 0.5*(1 + erf((t - t_on ) / sigma))   <- rise
+             * 0.5*(1 - erf((t - t_off) / sigma))   <- fall  (same sigma)
 
     Parameters
     ----------
     t0 : float
-        Time at which the AOM begins ramping up [seconds].  Intensity is
-        ~0.01% at t0 and reaches ~99.99% at t0 + 6*sigma.  Use 0.0 to start
-        the ramp at the beginning of the simulation.
+        Time of the 50% intensity point on the rising edge [seconds].
+        Use t0_fit from the analysis above, or 0.0 to centre the rise at t=0.
     sigma : float
         Erf width from the AOM fit [seconds].  sigma = w0 / (sqrt(2) * v_s).
         Use sigma_fit from the analysis above.
     t_pulse : float
-        Programmed RF pulse duration [seconds].  The falling edge begins at
-        t0 + t_pulse (intensity ~99.99% there, ~0.01% at t0 + t_pulse + 6*sigma).
+        Programmed RF pulse duration [seconds].  Controls when the falling
+        edge begins (at t0 + t_pulse).
     Omega_peak : float
         Peak Rabi frequency [rad/s].  Default 1.0 (returns normalised shape).
  
@@ -426,14 +425,14 @@ def aom_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
                               t_pulse=500e-9, Omega_peak=2*np.pi*1e6)
     result = qt.mesolve([H0, [H1, coeff]], psi0, tlist, [], [])
     """
-    t_on_50  = t0 + 3.0 * sigma            # 50% rise point  (intensity ~ 0 at t0)
-    t_off_50 = t0 + 3.0 * sigma + t_pulse  # 50% fall point  (fall starts at t0 + t_pulse)
+    t_off = t0 + t_pulse - 100e-9  # 50% fall point
 
     def f(t, _args=None):
-        rise = 0.5 * (1.0 + erf((t - t_on_50)  / sigma))
-        fall = 0.5 * (1.0 - erf((t - t_off_50) / sigma))
-        intensity = rise * fall          # product gives plateau between edges
+        rise = 0.5 * (1.0 + erf((t - t0)    / sigma))
+        fall = 0.5 * (1.0 - erf((t - t_off) / sigma))
+        intensity =  rise * fall
         return Omega_peak * np.sqrt(np.maximum(intensity, 0.0))
+
 
     params = dict(t0=t0, sigma=sigma, t_pulse=t_pulse, Omega_peak=Omega_peak)
     return f, params
