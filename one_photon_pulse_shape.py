@@ -3,16 +3,25 @@ import matplotlib.pyplot as plt
 import qutip as qt
 import scipy.constants as const
 from tqdm import tqdm
+import h5py
 
 from simulation_functions import *
+
+def read_RID(rid):    
+    with h5py.File(f'Data/0000{rid}-ClockExcitation_exp.h5', 'r') as f:
+        x = f['datasets']['current_scan.plots.x'][:]
+        y = f['datasets']['current_scan.plots.y'][:]
+    return x, y
+
+#%%
 
 if __name__ == "__main__":
     B_field_G    = 20   # bias field magnitude [G]
     detunings    = [2*PI * 5e6, 0.0, 0.0]   # laser is on resonance with each beam's target sublevel
     T_MAX        = 1e-6
-    t_push       = 0.0e-6
+    t_push       = 0.8e-6
     N_atoms      = 50
-    sigma_aom = 9e-9
+    sigma_aom = 90e-9
 
 
 
@@ -73,7 +82,7 @@ if __name__ == "__main__":
         pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9
     )
 
-    # Realistic AOM pulse: ramp starts at t=0, ramp down starts at t=T_MAX
+    # AOM pulse: 50% rise at t=0 (matching experiment), ramp starts at ~-sigma
     aom_params = {"t0": 0.0, "sigma": sigma_aom, "t_pulse": T_MAX}
     _, avg_pop_aom = simulate_one_photon_rabi_dynamics(
         pos, vel, beam_radii, powers, detunings, k_vecs,
