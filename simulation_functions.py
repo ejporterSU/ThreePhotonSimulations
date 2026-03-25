@@ -378,7 +378,7 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
     return tlist, avg_population / N_atoms
 
 
-def aom_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
+def erf_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
     """
     Returns a QuTiP-compatible coefficient function  f(t, args)  that gives
     the Rabi frequency envelope shaped by the measured AOM rise (and fall).
@@ -444,53 +444,126 @@ def aom_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
         return f, params
     
 
+def gaussian_rabi_envelope(t0, t_pulse, Omega_peak=1.0):
+    """
+    Returns a QuTiP-compatible coefficient function f(t, args) giving a
+    Gaussian Rabi frequency envelope.
+
+        Omega(t) = Omega_peak * exp(-0.5 * ((t - center) / sigma)^2)
+
+    where center = t0 + t_pulse/2 and sigma = t_pulse/4 (~95% of pulse
+    energy falls within [t0, t0 + t_pulse]).
+
+    Parameters
+    ----------
+    t0 : float
+        Start time of the pulse window [s].
+    t_pulse : float
+        Pulse duration [s]. Controls the centre and width of the Gaussian.
+    Omega_peak : float
+        Peak Rabi frequency [rad/s]. Default 1.0 (returns normalised shape).
+
+    Returns
+    -------
+    H_coeff : callable  f(t, args) -> float
+        Drop directly into a QuTiP time-dependent term.
+        args dict is unused but kept for QuTiP API compatibility.
+    params : dict
+        Dictionary of all parameters.
+    """
+    params = dict(t0=t0, t_pulse=t_pulse, Omega_peak=Omega_peak)
+    if t_pulse == 0:
+        return lambda t, _args=None: np.zeros_like(np.asarray(t, dtype=float)), params
+
+    center = t0 + t_pulse / 2
+    sigma  = t_pulse / 4
+
+    def f(t, _args=None):
+        return Omega_peak * np.exp(-0.5 * ((np.asarray(t) - center) / sigma)**2)
+
+    params.update(center=center, sigma=sigma)
+    return f, params
+
+
+def blackman_rabi_envelope(t0, t_pulse, Omega_peak=1.0):
+    """
+    Returns a QuTiP-compatible coefficient function f(t, args) giving a
+    Blackman-windowed Rabi frequency envelope.
+
+        Omega(t) = Omega_peak * (0.42 - 0.5*cos(2pi*(t-t0)/T)
+                                       + 0.08*cos(4pi*(t-t0)/T))
+                   for t in [t0, t0 + t_pulse], else 0.
+
+    The Blackman window is naturally 0 at both edges and 1 at the centre,
+    making it useful when spectral sidelobe suppression matters (e.g. atom
+    interferometry, narrow-line spectroscopy).
+
+    Parameters
+    ----------
+    t0 : float
+        Start time of the pulse [s].
+    t_pulse : float
+        Pulse duration [s].
+    Omega_peak : float
+        Peak Rabi frequency [rad/s]. Default 1.0 (returns normalised shape).
+
+    Returns
+    -------
+    H_coeff : callable  f(t, args) -> float
+        Drop directly into a QuTiP time-dependent term.
+        args dict is unused but kept for QuTiP API compatibility.
+    params : dict
+        Dictionary of all parameters.
+    """
+    params = dict(t0=t0, t_pulse=t_pulse, Omega_peak=Omega_peak)
+    if t_pulse == 0:
+        return lambda t, _args=None: np.zeros_like(np.asarray(t, dtype=float)), params
+
+    t_end = t0 + t_pulse
+
+    def f(t, _args=None):
+        t    = np.asarray(t)
+        mask = (t >= t0) & (t <= t_end)
+        phase = 2 * PI * (t - t0) / t_pulse
+        return Omega_peak * np.where(
+            mask,
+            0.42 - 0.5 * np.cos(phase) + 0.08 * np.cos(2 * phase),
+            0.0,
+        )
+
+    return f, params
+
+
 def test_envelopes(t, widths, envelope):
     """
     Plot Rabi frequency envelope shapes (not intensity) for a range of pulse durations.
 
     Supported envelopes:
         "SQUARE"    - ideal rectangular pulse.
-        "ERF"       - AOM-realistic rise/fall via aom_rabi_envelope (sigma = 90 ns).
-        "GAUSSIAN"  - Gaussian centered at w/2 with sigma = w/4 (~95% energy in [0, w]).
-        "BLACKMAN"  - Blackman window over [0, w]; zero at edges, peak 1 at centre.
-                      Good sidelobe suppression for spectroscopy / atom interferometry.
+        "ERF"       - AOM-realistic rise/fall (sigma = 90 ns); calls erf_rabi_envelope.
+        "GAUSSIAN"  - Gaussian centered at w/2 with sigma = w/4; calls gaussian_rabi_envelope.
+        "BLACKMAN"  - Blackman window over [0, w]; calls blackman_rabi_envelope.
 
     Args:
         t        (ndarray): Time array [s].
         widths   (ndarray): Pulse durations to sweep over [s].
         envelope (str):     One of the envelope names above.
     """
-    if envelope == "ERF":
-        for w in widths:
-            f, _ = aom_rabi_envelope(0, 90e-9, w)
-            plt.plot(t * 1e6, f(t))
+    envelope_fns = {
+        "ERF":      lambda w: erf_rabi_envelope(0, 90e-9, w),
+        "GAUSSIAN": lambda w: gaussian_rabi_envelope(0, w),
+        "BLACKMAN": lambda w: blackman_rabi_envelope(0, w),
+    }
 
-    elif envelope == "SQUARE":
+    if envelope == "SQUARE":
         for w in widths:
             plt.plot(t * 1e6, (t > 0) * (t < w))
-
-    elif envelope == "GAUSSIAN":
+    elif envelope in envelope_fns:
         for w in widths:
             if w == 0:
                 continue
-            center = w / 2
-            sigma  = w / 4          # ~95 % of pulse energy falls within [0, w]
-            env    = np.exp(-0.5 * ((t - center) / sigma)**2)
-            plt.plot(t * 1e6, env)
-
-    elif envelope == "BLACKMAN":
-        # w[n] = 0.42 - 0.5*cos(2pi*t/T) + 0.08*cos(4pi*t/T)
-        # Naturally 0 at edges and 1 at centre; no extra normalisation needed.
-        for w in widths:
-            if w == 0:
-                continue
-            mask  = (t >= 0) & (t <= w)
-            phase = 2 * PI * t / w
-            env   = np.where(mask,
-                             0.42 - 0.5 * np.cos(phase) + 0.08 * np.cos(2 * phase),
-                             0.0)
-            plt.plot(t * 1e6, env)
-
+            f, _ = envelope_fns[envelope](w)
+            plt.plot(t * 1e6, f(t))
     else:
         raise ValueError(f"Unknown envelope '{envelope}'. "
                          "Choose from: SQUARE, ERF, GAUSSIAN, BLACKMAN.")
