@@ -425,14 +425,93 @@ def aom_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
                               t_pulse=500e-9, Omega_peak=2*np.pi*1e6)
     result = qt.mesolve([H0, [H1, coeff]], psi0, tlist, [], [])
     """
-    t_off = t0 + t_pulse - 100e-9  # 50% fall point
-
+    assert t_pulse >= 0
+    t_off = t0 + t_pulse - 50e-9  # 50% fall point
+    t_on = t0 + 50e-9
+    
+    
     def f(t, _args=None):
-        rise = 0.5 * (1.0 + erf((t - t0)    / sigma))
+        rise = 0.5 * (1.0 + erf((t-t_on)    / sigma))
         fall = 0.5 * (1.0 - erf((t - t_off) / sigma))
         intensity =  rise * fall
         return Omega_peak * np.sqrt(np.maximum(intensity, 0.0))
 
 
     params = dict(t0=t0, sigma=sigma, t_pulse=t_pulse, Omega_peak=Omega_peak)
-    return f, params
+    if t_pulse < 50e-9: # AOM can't turn on this fast, just gives no light for t_pulse < 50ns
+        return lambda t: np.zeros(len(t)), params
+    else:
+        return f, params
+    
+
+def test_envelopes(t, widths, envelope):
+    """
+    Plot Rabi frequency envelope shapes (not intensity) for a range of pulse durations.
+
+    Supported envelopes:
+        "SQUARE"    - ideal rectangular pulse.
+        "ERF"       - AOM-realistic rise/fall via aom_rabi_envelope (sigma = 90 ns).
+        "GAUSSIAN"  - Gaussian centered at w/2 with sigma = w/4 (~95% energy in [0, w]).
+        "BLACKMAN"  - Blackman window over [0, w]; zero at edges, peak 1 at centre.
+                      Good sidelobe suppression for spectroscopy / atom interferometry.
+
+    Args:
+        t        (ndarray): Time array [s].
+        widths   (ndarray): Pulse durations to sweep over [s].
+        envelope (str):     One of the envelope names above.
+    """
+    if envelope == "ERF":
+        for w in widths:
+            f, _ = aom_rabi_envelope(0, 90e-9, w)
+            plt.plot(t * 1e6, f(t))
+
+    elif envelope == "SQUARE":
+        for w in widths:
+            plt.plot(t * 1e6, (t > 0) * (t < w))
+
+    elif envelope == "GAUSSIAN":
+        for w in widths:
+            if w == 0:
+                continue
+            center = w / 2
+            sigma  = w / 4          # ~95 % of pulse energy falls within [0, w]
+            env    = np.exp(-0.5 * ((t - center) / sigma)**2)
+            plt.plot(t * 1e6, env)
+
+    elif envelope == "BLACKMAN":
+        # w[n] = 0.42 - 0.5*cos(2pi*t/T) + 0.08*cos(4pi*t/T)
+        # Naturally 0 at edges and 1 at centre; no extra normalisation needed.
+        for w in widths:
+            if w == 0:
+                continue
+            mask  = (t >= 0) & (t <= w)
+            phase = 2 * PI * t / w
+            env   = np.where(mask,
+                             0.42 - 0.5 * np.cos(phase) + 0.08 * np.cos(2 * phase),
+                             0.0)
+            plt.plot(t * 1e6, env)
+
+    else:
+        raise ValueError(f"Unknown envelope '{envelope}'. "
+                         "Choose from: SQUARE, ERF, GAUSSIAN, BLACKMAN.")
+
+    plt.title(f"Rabi Envelope Shapes - Pulse Shape = {envelope}")
+    plt.ylabel("Normalized Rabi Freq.")
+    plt.xlabel(r"Time ($\mu s$)")
+    plt.xlim(t[0]*1e6, t[-1]*1e6)
+    plt.show()
+
+
+if __name__ == '__main__':
+    pass
+    # t = np.linspace(-0.5e-6, 2.5e-6, 1000)
+    # widths = np.linspace(0, 2e-6, 15)
+
+    # test_envelopes(t, widths, "SQUARE")
+    # test_envelopes(t, widths, "ERF")
+    # test_envelopes(t, widths, "GAUSSIAN")
+    # test_envelopes(t, widths, "BLACKMAN")
+
+    
+
+
