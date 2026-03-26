@@ -289,93 +289,170 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
                                       powers, detunings, k_vecs,
                                       pol_vecs, quant_axis, mJ_targets,
                                       t_max=20e-6, dt=10e-9,
-                                      aom_params=None):
+                                      envelope='SQUARE',
+                                      envelope_params=None,
+                                      ensemble_params=None):
     """
     Simulate 689 nm single-photon Rabi dynamics for an atomic ensemble.
 
-    Solves the Lindblad master equation independently for each atom using
-    its local Rabi frequency and Doppler-shifted detuning, then returns
-    the ensemble-averaged excited state population.
+    Two operating modes, selected by `envelope`:
 
-    The RWA Hamiltonian (in units where hbar = 1) is:
-        H = (Omega(t) * sigma_x - Delta_eff * sigma_z) / 2
-    where Delta_eff = (-k.v) + detunings[0] is the total detuning from the
-    target Zeeman sublevel (detunings[0] = 0 means laser is on resonance).
-    The Rabi frequency Omega already includes the polarization coupling factor
-    |eps_q| for the target mJ sublevel. Spontaneous decay at rate Gamma_689
-    is included via a Lindblad collapse operator.
+    SQUARE (default)
+        The Hamiltonian is time-independent.  mesolve evolves the full
+        tlist in one call per atom and returns population at every time
+        step.  The provided positions/velocities are used as-is.
+
+    ERF / GAUSSIAN / BLACKMAN  -- shot-by-shot scan
+        Each element of tlist is treated as a pulse duration.  For each
+        duration a complete shaped pulse is simulated independently and
+        only the final excited-state population is recorded.  This
+        matches a real experiment where you program a list of pulse
+        times and measure the resulting population for each shot.
+
+        If ensemble_params is given, atom positions and velocities are
+        re-sampled from the thermal distribution for every shot so that
+        each point on the curve uses an independent atomic ensemble.
+
+    The RWA Hamiltonian (hbar = 1):
+        H = Omega(t)/2 * sigma_x  -  Delta_eff/2 * sigma_z
+    where Delta_eff = (-k.v) + detunings[0].  Spontaneous decay at
+    Gamma_689 is included via a Lindblad collapse operator.
 
     Args:
-        positions  (ndarray): Atom positions, shape (N, 3) [m].
-        velocities (ndarray): Atom velocities, shape (N, 3) [m/s].
-        beam_radii (tuple):   1/e^2 beam radii (w0, w1, w2) [m].
-        powers     (tuple):   Beam powers (P0, P1, P2) [W].
-        detunings  (list):    Laser detunings from target Zeeman sublevel [rad/s];
-                              detunings[0] is used for the 689 nm beam.
-        k_vecs     (tuple):   Wavevectors (k0, k1, k2), each shape (3,) [rad/m].
-        pol_vecs   (tuple):   Polarization unit vectors (eps0, eps1, eps2), shape (3,).
-        quant_axis (ndarray): Quantization axis unit vector, shape (3,).
-        mJ_targets (tuple):   Target Zeeman sublevel for each beam (-1, 0, or +1).
-        t_max      (float):   Total simulation time [s]. Default 20 us.
-        dt         (float):   Time step [s]. Default 10 ns.
-        aom_params (dict or None):
-                              If provided, uses a realistic AOM pulse envelope
-                              (via aom_rabi_envelope) instead of a square pulse.
-                              Required keys:
-                                  "t0"      : float, 50% intensity point of
-                                              rising edge [s].
-                                  "sigma"   : float, erf width of AOM rise/fall [s].
-                                  "t_pulse" : float, programmed RF pulse duration [s].
-                              The per-atom peak Rabi frequency is used automatically
-                              as Omega_peak.
+        positions      (ndarray): Atom positions, shape (N, 3) [m].
+                                  Used directly for SQUARE or when
+                                  ensemble_params is None.
+        velocities     (ndarray): Atom velocities, shape (N, 3) [m/s].
+        beam_radii     (tuple):   1/e^2 beam radii (w0, w1, w2) [m].
+        powers         (tuple):   Beam powers (P0, P1, P2) [W].
+        detunings      (list):    Laser detunings [rad/s]; detunings[0]
+                                  for the 689 nm beam.
+        k_vecs         (tuple):   Wavevectors (k0, k1, k2) [rad/m].
+        pol_vecs       (tuple):   Polarization unit vectors (eps0, eps1, eps2).
+        quant_axis     (ndarray): Quantization axis unit vector, shape (3,).
+        mJ_targets     (tuple):   Target Zeeman sublevel per beam.
+        t_max          (float):   Max time or pulse duration [s].
+        dt             (float):   Time step [s].
+        envelope       (str):     'SQUARE', 'ERF', 'GAUSSIAN', or 'BLACKMAN'.
+        envelope_params (dict or None):
+                                  Shape-specific fixed parameters.
+                                  ERF      : {'t0': float [s],
+                                              'sigma': float [s]}
+                                  GAUSSIAN : {'t0': float [s]}  (opt.)
+                                  BLACKMAN : {'t0': float [s]}  (opt.)
+                                  t0 defaults to 0.0 if omitted.
+        ensemble_params (dict or None):
+                                  If provided, atoms are re-sampled each
+                                  shot (shaped-pulse mode only).
+                                  Keys: 'radii', 'temperatures', 'n_atoms',
+                                  and optionally 'mass' (default 88 amu).
 
     Returns:
-        tlist          (ndarray): Time points, shape (n_steps,) [s].
-        avg_population (ndarray): Ensemble-averaged excited state population,
-                                  shape (n_steps,).
+        tlist          (ndarray): Time / pulse-duration axis [s].
+        avg_population (ndarray): Ensemble-averaged excited-state population.
+                                  SQUARE : population during continuous evolution.
+                                  Shaped : final population after each shot.
     """
-    N_atoms = positions.shape[0]
     n_steps = int(t_max / dt) + 1
     tlist   = np.linspace(0, t_max, n_steps)
-    tlist_sim = tlist
-    if aom_params is not None:
-        tlist_sim   = np.linspace(-100e-9, t_max+100e-9, int((t_max + 200e-9) / dt) + 1)
-    
 
-    # Two-level system operators
+    # Shared two-level operators
     g      = qt.basis(2, 0)
-    sm     = qt.destroy(2)              # lowering operator |g><e|
-    sp     = qt.create(2)               # raising operator  |e><g|
-    proj_e = sp * sm                    # excited state projector |e><e|
+    sm     = qt.destroy(2)              # lowering operator  |g><e|
+    sp     = qt.create(2)               # raising operator   |e><g|
+    proj_e = sp * sm                    # excited-state projector |e><e|
+    rho0   = g * g.dag()                # initial state: ground state
+    c_ops  = [np.sqrt(gamma_689) * sm]  # spontaneous decay at Gamma_689
 
-    rho0  = g * g.dag()                 # initial state: all atoms in ground state
-    c_ops = [np.sqrt(gamma_689) * sm]   # spontaneous decay at rate Gamma_689
+    # ------------------------------------------------------------------ #
+    # SQUARE: constant-H mesolve, return full time trace                  #
+    # ------------------------------------------------------------------ #
+    if envelope == 'SQUARE':
+        N_atoms        = positions.shape[0]
+        avg_population = np.zeros(n_steps)
+        params         = get_calculated_parameters(
+            positions, velocities, k_vecs, powers,
+            beam_radii, pol_vecs, quant_axis, mJ_targets)
+
+        for i in tqdm(range(N_atoms), desc='atoms (SQUARE)'):
+            dshift = params['beam_0']['dshift'][i]
+            rabi   = params['beam_0']['Omega'][i]
+            delta  = dshift + detunings[0]
+            H_sys  = (rabi * qt.sigmax() - delta * qt.sigmaz()) / 2
+            result = qt.mesolve(H_sys, rho0, tlist, c_ops, [proj_e])
+            avg_population += result.expect[0]
+
+        return tlist, avg_population / N_atoms
+
+    # ------------------------------------------------------------------ #
+    # SHAPED: shot-by-shot scan over pulse durations                      #
+    # ------------------------------------------------------------------ #
+    if envelope not in ('ERF', 'GAUSSIAN', 'BLACKMAN'):
+        raise ValueError(f"Unknown envelope '{envelope}'. "
+                         "Choose from: SQUARE, ERF, GAUSSIAN, BLACKMAN.")
+
+    ep = envelope_params or {}
+    t0 = ep.get('t0', 0.0)
 
     avg_population = np.zeros(n_steps)
-    params = get_calculated_parameters(positions, velocities, k_vecs, powers,
-                                       beam_radii, pol_vecs, quant_axis, mJ_targets)
 
-    for i in range(N_atoms):
-        dshift = params['beam_0']['dshift'][i]
-        rabi   = params['beam_0']['Omega'][i]
-        delta  = dshift + detunings[0]
+    for i, t_pulse in enumerate(tqdm(tlist, desc=f'shots ({envelope})')):
 
-        if aom_params is not None:
-            # Time-dependent Hamiltonian: H = Omega(t)/2 * sigmax - delta/2 * sigmaz
-            coeff, _ = aom_rabi_envelope(
-                t0=aom_params['t0'],
-                sigma=aom_params['sigma'],
-                t_pulse=aom_params['t_pulse'],
-                Omega_peak=rabi,
+        # --- Atomic ensemble for this shot ---
+        if ensemble_params is not None:
+            pos_i, vel_i = sample_atomic_ensemble(
+                radii=ensemble_params['radii'],
+                temperatures=ensemble_params['temperatures'],
+                mass=ensemble_params.get('mass', 88 * AMU),
+                n_samples=ensemble_params['n_atoms'],
             )
-            H_sys = [-0.5 * delta * qt.sigmaz(), [0.5 * qt.sigmax(), coeff]]
         else:
-            H_sys = (rabi * qt.sigmax() - delta * qt.sigmaz()) / 2
+            pos_i, vel_i = positions, velocities
 
-        result = qt.mesolve(H_sys, rho0, tlist_sim, c_ops, [proj_e])
-        avg_population += result.expect[0]
+        N_atoms_i = pos_i.shape[0]
+        params_i  = get_calculated_parameters(
+            pos_i, vel_i, k_vecs, powers,
+            beam_radii, pol_vecs, quant_axis, mJ_targets)
 
-    return tlist, avg_population / N_atoms
+        if t_pulse == 0.0:
+            avg_population[i] = 0.0
+            continue
+
+        # --- Simulation time window for this shot ---
+        # ERF: extend 100 ns beyond each edge to capture erf rise/fall tails.
+        # Others: pulse is exactly [t0, t0 + t_pulse].
+        if envelope == 'ERF' or envelope == "GAUSSIAN":
+            t_start = t0 - 150e-9
+            t_end   = t0 + t_pulse + 150e-9
+        else:
+            t_start = t0
+            t_end   = t0 + t_pulse
+
+        n_sim     = max(2, int((t_end - t_start) / dt) + 1)
+        tlist_sim = np.linspace(t_start, t_end, n_sim)
+
+        shot_pop = 0.0
+        for j in range(N_atoms_i):
+            dshift  = params_i['beam_0']['dshift'][j]
+            rabi_j  = params_i['beam_0']['Omega'][j]
+            delta_j = dshift + detunings[0]
+
+            # Build envelope scaled to this atom's peak Rabi frequency
+            if envelope == 'ERF':
+                coeff, _ = erf_rabi_envelope(
+                    t0, ep.get('sigma', 90e-9), t_pulse, Omega_peak=rabi_j)
+            elif envelope == 'GAUSSIAN':
+                coeff, _ = gaussian_rabi_envelope(t0, t_pulse, Omega_peak=rabi_j)
+            else:  # BLACKMAN
+                coeff, _ = blackman_rabi_envelope(t0, t_pulse, Omega_peak=rabi_j)
+
+            H_sys  = [-0.5 * delta_j * qt.sigmaz(), [0.5 * qt.sigmax(), coeff]]
+            result = qt.mesolve(H_sys, rho0, tlist_sim, c_ops, [proj_e])
+            shot_pop += result.expect[0][-1]  # final population after the pulse
+
+        avg_population[i] = shot_pop / N_atoms_i
+
+    return tlist, avg_population
 
 
 def erf_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
@@ -438,8 +515,8 @@ def erf_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
 
 
     params = dict(t0=t0, sigma=sigma, t_pulse=t_pulse, Omega_peak=Omega_peak)
-    if t_pulse < 50e-9: # AOM can't turn on this fast, just gives no light for t_pulse < 50ns
-        return lambda t: np.zeros(len(t)), params
+    if t_pulse < 50e-9:  # AOM can't turn on this fast; returns zero for t_pulse < 50 ns
+        return lambda t, _args=None: 0.0, params
     else:
         return f, params
     
