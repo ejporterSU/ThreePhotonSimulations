@@ -5,20 +5,16 @@ import scipy.constants as const
 from tqdm import tqdm
 import h5py
 
-from simulation_functions import *
 
-def read_RID(rid):    
-    with h5py.File(f'Data/0000{rid}-ClockExcitation_exp.h5', 'r') as f:
-        x = f['datasets']['current_scan.plots.x'][:]
-        y = f['datasets']['current_scan.plots.y'][:]
-    return x, y
 
 #%%
 
+from simulation_functions import *
+
 if __name__ == "__main__":
     B_field_G    = 20   # bias field magnitude [G]
-    detunings    = [2*PI * 5e6, 0.0, 0.0]   # laser is on resonance with each beam's target sublevel
-    T_MAX        = 1e-6
+    detunings    = 2*PI * 1e6 * np.array([1.0, 0.0, 0.0])   # laser is on resonance with each beam's target sublevel [rad/s]
+    T_MAX        = 0.85e-6
     t_push       = 0.8e-6
     N_atoms      = 50
     sigma_aom = 90e-9
@@ -26,12 +22,11 @@ if __name__ == "__main__":
 
 
 
+    w0, w1, w2       = 0.55e-3, 0.9e-3, 0.9e-3    # beam 1/e^2 radii [m]
+    wa_x, wa_y, wa_z = 40e-6, 40e-6, 130e-6       # cloud 1-sigma radii [m]
+    tx, ty, tz       = 2e-6, 2e-6, 2e-6            # cloud temperatures [K]
 
-    w0, w1, w2       = 0.5e-3, 0.9e-3, 0.9e-3    # beam 1/e^2 radii [m]
-    wa_x, wa_y, wa_z = 30e-6, 0e-6, 0e-6       # cloud 1-sigma radii [m]
-    tx, ty, tz       = 0e-6, 0e-6, 0e-6            # cloud temperatures [K]
-
-    P_689 = 10e-3 # peak power
+    P_689 = 20e-3 # peak power
     P_688 = 0.0     # off for single-photon dynamics
     P_679 = 0.0
 
@@ -75,25 +70,29 @@ if __name__ == "__main__":
     vel = np.atleast_2d(vel)
 
 
-
-    # Simulate and plot 1-photon Rabi flopping
-    tlist, avg_pop = simulate_one_photon_rabi_dynamics(
-        pos, vel, beam_radii, powers, detunings, k_vecs,
-        pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9
+    tlist, avg_pop_ideal = simulate_one_photon_rabi_dynamics(
+        np.zeros((1, 3)), np.zeros((1, 3)), beam_radii, powers, detunings, k_vecs,
+        pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9,
+        envelope='SQUARE'
     )
 
+    _, avg_pop_sq = simulate_one_photon_rabi_dynamics(
+        pos, vel, beam_radii, powers, detunings, k_vecs,
+        pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9,
+        envelope='SQUARE'
+    )
+
+
     # AOM pulse: 50% rise at t=0 (matching experiment), ramp starts at ~-sigma
-    aom_params = {"t0": 0.0, "sigma": sigma_aom, "t_pulse": T_MAX}
+    aom_params = {"t0": 0.0, "sigma": sigma_aom}
     _, avg_pop_aom = simulate_one_photon_rabi_dynamics(
         pos, vel, beam_radii, powers, detunings, k_vecs,
         pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9,
-        aom_params=aom_params
+        envelope='ERF', envelope_params=aom_params
     )
 
-    _, avg_pop_ideal = simulate_one_photon_rabi_dynamics(
-        np.zeros((1, 3)), np.zeros((1, 3)), beam_radii, powers, detunings, k_vecs,
-        pol_vecs, quant_axis, mJ_targets, t_max=T_MAX, dt=5e-9
-    )
+    
+    
 
     # Theory curve: coupling factor applied, damped envelope included
     C0           = get_coupling_factor(eps_0, quant_axis, mJ_targets[0])
@@ -105,10 +104,10 @@ if __name__ == "__main__":
 
     # Readout model
     
-    avg_pop_meas     = apply_readout(avg_pop,     t_push)
+    avg_pop_sq_meas     = apply_readout(avg_pop_sq,     t_push)
     avg_pop_aom_meas = apply_readout(avg_pop_aom, t_push)
-    # pop_theory_meas  = apply_readout(pop_theory,  t_push)
-    avg_pop_meas_ideal = apply_readout(avg_pop_ideal, t_push)
+    avg_pop_ideal_meas = apply_readout(avg_pop_ideal, t_push)
+    pop_theory_meas  = apply_readout(pop_theory,  t_push)
 
     I_peak          = 2 * P_689 * 100 / (PI * w0**2)           # peak intensity [uW/cm^2]
     Omega_bare      = gamma_689 * np.sqrt(I_peak / (2 * Is_689)) # Rabi freq before coupling factor
@@ -141,48 +140,18 @@ if __name__ == "__main__":
     print(f"    Max observable population:     {peak_excitation * readout_fidelity:.4f}")
     print("=" * 55)
 
-    # Pulse-shape panels: show full envelope for t_pulse = 1x, 2x, 5x sigma
 
-    t_us        = tlist * 1e6
-    pulse_cases = [(1, '1σ'), (2, '2σ'), (5, '5σ ')]
+    t_us = tlist * 1e6
+    plt.plot(t_us, avg_pop_sq_meas,     color='C0', label='Square pulse')
+    plt.plot(t_us, avg_pop_aom_meas,   color='C1', label=rf'AOM pulse ($\sigma$ = {sigma_aom*1e9} ns)')
+    plt.plot(t_us, avg_pop_ideal_meas, color='C2', label='Ideal')
+    plt.plot(t_us, pop_theory_meas, color='C3', linestyle='--', label='Theory')
 
-    # Layout: 3 pulse-shape panels on top, main Rabi plot spanning full width below
-    fig = plt.figure(figsize=(10, 6))
-    gs  = fig.add_gridspec(2, 3, height_ratios=[1, 2.5], hspace=0.5, wspace=0.35)
-
-    ax_b    = fig.add_subplot(gs[0, 0])
-    ax_m    = fig.add_subplot(gs[0, 1])
-    ax_e    = fig.add_subplot(gs[0, 2])
-    ax_main = fig.add_subplot(gs[1, :])
-
-    for ax_p, (n, title) in zip([ax_b, ax_m, ax_e], pulse_cases):
-        t_pulse_i  = n * sigma_aom
-        t_end      = 6 * sigma_aom + t_pulse_i          # 3σ rise + plateau + 3σ fall
-        t_panel    = np.linspace(0, t_end, 500)
-        coeff_p, _ = aom_rabi_envelope(t0=0.0, sigma=sigma_aom,
-                                       t_pulse=t_pulse_i, Omega_peak=1.0)
-        env_p      = np.array([coeff_p(t) for t in t_panel])
-        ax_p.plot(t_panel * 1e9, env_p, color='C1')
-        ax_p.fill_between(t_panel * 1e9, env_p, alpha=0.2, color='C1')
-        ax_p.set_title(f't_pulse = {title}', fontsize=9)
-        ax_p.set_xlabel('Time [ns]', fontsize=8)
-        ax_p.set_ylabel(r'$\Omega(t)/\Omega_0$', fontsize=8)
-        ax_p.set_ylim(0, 1.15)
-        ax_p.tick_params(labelsize=7)
-
-    # Main Rabi flop plot
-    ax_main.plot(t_us, avg_pop_meas,       color='C0', label='Square pulse')
-    ax_main.plot(t_us, avg_pop_aom_meas,   color='C1', linestyle='--',
-                 label=rf'AOM pulse ($\sigma$ = {sigma_aom*1e9} ns)')
-    # ax_main.plot(t_us, avg_pop_meas_ideal, color='C2', label='Ideal')
-    # ax_main.plot(t_us, pop_theory_meas, color='C3', linestyle='--', label='Theory')
-    # ax_main.scatter(t_raw_us, pop_avg_raw, color='C4', label='Raw Data')
-
-    ax_main.set_xlabel("Time [us]")
-    ax_main.set_ylabel("Excited state population")
-    ax_main.set_title("689 nm Single-Photon Rabi Flopping")
-    # ax_main.set_ylim(0, 1)
-    ax_main.legend()
+    plt.xlabel("Time [us]")
+    plt.ylabel("Excited state population")
+    plt.title("689 nm Single-Photon Rabi Flopping")
+    plt.ylim(0, 1)
+    plt.legend()
 
     plt.tight_layout()
     plt.show()
