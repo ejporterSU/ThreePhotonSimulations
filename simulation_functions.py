@@ -397,6 +397,7 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
     avg_population = np.zeros(n_steps)
 
     for i, t_pulse in enumerate(tqdm(tlist, desc=f'shots ({envelope})')):
+        
 
         # --- Atomic ensemble for this shot ---
         if ensemble_params is not None:
@@ -439,6 +440,7 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
 
             # Build envelope scaled to this atom's peak Rabi frequency
             if envelope == 'ERF':
+                
                 coeff, _ = erf_rabi_envelope(
                     t0, ep.get('sigma', 90e-9), t_pulse, Omega_peak=rabi_j)
             elif envelope == 'GAUSSIAN':
