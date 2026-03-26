@@ -79,8 +79,8 @@ for i, t_pulse in enumerate(PULSE_TIMES):
 
     ax.set_title(f'{t_pulse*1e9:.0f} ns', fontsize=9)
     ax.tick_params(labelsize=7)
-
-    ax.set_xlim(-0.3, 0.1) # check turn on time
+    ax.set_xlim(-0.15, 0.23)
+    # ax.set_xlim(-0.3, 0.1) # check turn on time
     # ax.set_xlim(t_pulse*1e6 - 0.1, t_pulse*1e6 + 0.1) # check turn off time
 
 
@@ -98,5 +98,5 @@ fig.suptitle(
 plt.tight_layout()
 plt.show()
 
-# fig.savefig("Figures/aom_pulse_valid_on.png", dpi=300, bbox_inches="tight", facecolor="white")  
+# fig.savefig("Figures/aom_pulse_valid_full.png", dpi=300, bbox_inches="tight", facecolor="white")  
 

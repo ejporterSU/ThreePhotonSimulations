@@ -516,8 +516,7 @@ def erf_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
     result = qt.mesolve([H0, [H1, coeff]], psi0, tlist, [], [])
     """
     t_off = t0 + t_pulse - 55e-9  # 50% fall point (55 ns is an empirical AOM timing offset)
-    t_on = t0
-    
+    t_on = t0 + 50e-9
     
     def f(t, _args=None):
         rise = 0.5 * (1.0 + erf((t-t_on)    / sigma))
