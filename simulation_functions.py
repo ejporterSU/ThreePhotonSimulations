@@ -423,8 +423,10 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
         # ERF: extend 100 ns beyond each edge to capture erf rise/fall tails.
         # Others: pulse is exactly [t0, t0 + t_pulse].
         if envelope == 'ERF' or envelope == "GAUSSIAN":
+            # add 150ns and 100 ns to start and end of 
+            # simulation to account for rise and fall time of the pulse
             t_start = t0 - 150e-9
-            t_end   = t0 + t_pulse + 150e-9
+            t_end   = t0 + t_pulse + 100e-9
         else:
             t_start = t0
             t_end   = t0 + t_pulse
@@ -460,68 +462,75 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
 def erf_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
     """
     Returns a QuTiP-compatible coefficient function  f(t, args)  that gives
-    the Rabi frequency envelope shaped by the measured AOM rise (and fall).
+    the Rabi frequency envelope shaped by the measured AOM rise and fall.
 
-    The intensity profile is two back-to-back erf steps:
-        turn-on  at  t_on  = t0
-        turn-off at  t_off = t0 + t_pulse
+    The intensity profile is two back-to-back erf steps with an asymmetric
+    fall (empirically measured from AOM data):
+
+        t_on  = t0                        # 50% rise point
+        t_off = t0 + t_pulse - 55e-9     # 50% fall point (AOM turns off 55 ns
+                                          # before the RF pulse ends — empirical)
 
     Rabi frequency:
-        Omega(t) = Omega_peak * sqrt( I(t) )
+        Omega(t) = Omega_peak * sqrt( max(I(t), 0) )
     where
-        I(t) = 0.5*(1 + erf((t - t_on ) / sigma))   <- rise
-             * 0.5*(1 - erf((t - t_off) / sigma))   <- fall  (same sigma)
+        I(t) = 0.5*(1 + erf((t - t_on ) / sigma))          <- rise
+             * 0.5*(1 - erf((t - t_off) / (sigma * 0.65))) <- fall
+                                          # fall is faster: sigma_fall = sigma * 0.65 (empirical)
 
     Parameters
     ----------
     t0 : float
         Time of the 50% intensity point on the rising edge [seconds].
-        Use t0_fit from the analysis above, or 0.0 to centre the rise at t=0.
     sigma : float
-        Erf width from the AOM fit [seconds].  sigma = w0 / (sqrt(2) * v_s).
-        Use sigma_fit from the analysis above.
+        Erf width for the rising edge [seconds].  The falling edge uses
+        sigma * 0.65 (empirically measured to be faster than the rise).
     t_pulse : float
-        Programmed RF pulse duration [seconds].  Controls when the falling
-        edge begins (at t0 + t_pulse).
+        Programmed RF pulse duration [seconds].  The 50% fall point is at
+        t0 + t_pulse - 55 ns (empirical AOM timing offset).
     Omega_peak : float
         Peak Rabi frequency [rad/s].  Default 1.0 (returns normalised shape).
- 
+
     Returns
     -------
     H_coeff : callable  f(t, args) -> float
         Drop this directly into a QuTiP time-dependent term:
-            H = [H0, [H1, aom_rabi_envelope(...)]]
+            H = [H0, [H1, erf_rabi_envelope(...)]]
         args dict is unused but kept for QuTiP API compatibility.
     params : dict
         Dictionary of all parameters (handy for bookkeeping / mesolve args).
 
+    Notes
+    -----
+    For t_pulse < 50 ns the AOM does not open meaningfully (t_off is at or
+    before t_on), so the function short-circuits and returns a zero callable
+    to avoid a wasted mesolve call.
+
     Example
     -------
     import qutip as qt
-    H0   = -0.5 * delta * qt.sigmaz()
-    H1   =  0.5 * qt.sigmax()          # Omega(t) prefactor goes here
-    coeff = aom_rabi_envelope(t0=t0_fit, sigma=sigma_fit,
-                              t_pulse=500e-9, Omega_peak=2*np.pi*1e6)
+    H0    = -0.5 * delta * qt.sigmaz()
+    H1    =  0.5 * qt.sigmax()          # Omega(t) prefactor goes here
+    coeff, _ = erf_rabi_envelope(t0=0.0, sigma=90e-9,
+                                 t_pulse=500e-9, Omega_peak=2*np.pi*1e6)
     result = qt.mesolve([H0, [H1, coeff]], psi0, tlist, [], [])
     """
-    assert t_pulse >= 0
-    t_off = t0 + t_pulse - 50e-9  # 50% fall point
-    t_on = t0 + 50e-9
+    t_off = t0 + t_pulse - 55e-9  # 50% fall point (55 ns is an empirical AOM timing offset)
+    t_on = t0
     
     
     def f(t, _args=None):
         rise = 0.5 * (1.0 + erf((t-t_on)    / sigma))
-        fall = 0.5 * (1.0 - erf((t - t_off) / sigma))
+        fall = 0.5 * (1.0 - erf((t - t_off) / (sigma * 0.65)))
         intensity =  rise * fall
         return Omega_peak * np.sqrt(np.maximum(intensity, 0.0))
 
 
     params = dict(t0=t0, sigma=sigma, t_pulse=t_pulse, Omega_peak=Omega_peak)
-    if t_pulse < 50e-9:  # AOM can't turn on this fast; returns zero for t_pulse < 50 ns
+    if t_pulse < 50e-9:  # conservative cutoff: below ~55 ns t_off <= t_on so formula drives nothing
         return lambda t, _args=None: 0.0, params
     else:
         return f, params
-    
 
 def gaussian_rabi_envelope(t0, t_pulse, Omega_peak=1.0):
     """
