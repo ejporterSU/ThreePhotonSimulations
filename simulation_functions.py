@@ -574,7 +574,7 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
         for i in range(N_atoms):
             d0   = par['beam_0']['dshift'][i] + detunings[0]
             d01  = d0  + par['beam_1']['dshift'][i] + detunings[1]
-            d012 = d01 + par['beam_2']['dshift'][i] + detunings[2]
+            d012 = d01 + par['beam_2']['dshift'][i] - detunings[2]
             O0   = par['beam_0']['Omega'][i]
             O1   = par['beam_1']['Omega'][i]
             O2   = par['beam_2']['Omega'][i]
@@ -636,7 +636,7 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
         for j in range(N_atoms_i):
             d0   = par_i['beam_0']['dshift'][j] + detunings[0]
             d01  = d0  + par_i['beam_1']['dshift'][j] + detunings[1]
-            d012 = d01 + par_i['beam_2']['dshift'][j] + detunings[2]
+            d012 = d01 + par_i['beam_2']['dshift'][j] - detunings[2]
             O0   = par_i['beam_0']['Omega'][j]
             O1   = par_i['beam_1']['Omega'][j]
             O2   = par_i['beam_2']['Omega'][j]

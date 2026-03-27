@@ -52,13 +52,15 @@ B_field_T = B_field_G * 1e-4
 delta_zeeman_689 = get_zeeman_detuning(G_J_3P1, mJ_targets[0], B_field_T)
 
 # --- residual detunings (laser already tuned near Zeeman-shifted transitions) ---
-detuning_0   = 2*PI * 5.0e6 + delta_zeeman_689         # 689 nm detuning from 1S0→3P1(mJ=0) [rad/s]
-detuning_1   = - 2*PI * 400e6         # 688 nm detuning from 3P1(mJ=0)→3S1 [rad/s]
-detuning_2   = -(detuning_1 + detuning_0)        # 679 nm detuning from 3S1→3P0         [rad/s]
-detunings = [detuning_0 - delta_zeeman_689, detuning_1 + delta_zeeman_689, detuning_2]
-detunings = [2*PI*5e6, -358e6*2*PI, 2*PI*353e6]
+detuning_mj1 = 2*PI * 5.0e6  # detuning from 3p1, mj=1 <-> 3s1
+detuning_0   = delta_zeeman_689 + detuning_mj1       # 689 nm detuning from 1S0→3P1(mJ=0) [rad/s]
+detuning_2   = 2*PI * -353.0e6        # 679 nm detuning from 3S1→3P0         [rad/s]
+detunings = [detuning_mj1, 
+             detuning_2 - detuning_mj1, 
+             detuning_2]
 
-print(rf"Zeeman Shift: dwB$={delta_zeeman_689 * 1e-6 / (2*PI):.2f} MHz")
+
+print(rf"Zeeman Shift: dwB={delta_zeeman_689 * 1e-6 / (2*PI):.2f} MHz")
 print(rf"""Input Detunings:
     delta_0={detunings[0] * 1e-6 / (2*PI):.2f} MHz
     delta_1={detunings[1] * 1e-6 / (2*PI):.2f} MHz
@@ -80,6 +82,7 @@ T_MAX   = 3e-6
 dt      = 10e-9
 N_atoms = 50
 t_push = 0.8e-6
+n_shots = 20
 # --- misc params ---
 
 sigma_aom = 90e-9
@@ -91,9 +94,9 @@ pos, vel = sample_atomic_ensemble(cloud_radii, temperatures, n_samples=1)
 pos = np.atleast_2d(pos)
 vel = np.atleast_2d(vel)
 
-mode="TIME" # "TIME" for time scan(normal rabi flopping)
+mode="FREQ" # "TIME" for time scan(normal rabi flopping)
             # "FREQ" for frequency scans to find stark shift
-delta_AC = 2*PI * 1e6 * -0.9
+delta_AC = 2*PI * 1e6 * 0.9
 if mode == "TIME":
     det_temp = detunings
     det_temp[2] = det_temp[2] + delta_AC
@@ -103,6 +106,7 @@ if mode == "TIME":
         pos, vel, beam_radii, powers, det_temp, k_vecs,
         pol_vecs, quant_axis, mJ_targets,
         t_max=T_MAX, dt=dt,
+        n_shots=n_shots,
         envelope=envelope,
         envelope_params=ep,
     )
@@ -111,7 +115,7 @@ if mode == "TIME":
     state_labels = ['1S0', '3P1', '3S1', '3P0']
     colors       = ['C0', 'C1', 'C2', 'C3']
     for k in range(4):
-        ax.plot(tlist * 1e6, pops[k], color=colors[k], label=state_labels[k])
+        ax.scatter(tlist * 1e6, pops[k], color=colors[k], label=state_labels[k])
     ax.set_xlabel('Time [µs]')
     ax.set_ylabel('State population')
     ax.set_title(f'Three-photon ladder — Rabi flopping\n'
@@ -127,8 +131,8 @@ elif mode == "FREQ":
     # Scan detunings[2] (679 nm) around the bare three-photon resonance to locate
     # the AC Stark-shifted resonance. All other detunings are held fixed.
     t_probe    = T_MAX           # fixed pulse time [s]; tune to ~quarter pi-time for contrast
-    dfi = 2*PI * -1e6     # scan ±50 MHz around the bare resonance
-    dff = 2*PI * 0e6
+    dfi = 2*PI * 0.5e6     # scan ±50 MHz around the bare resonance
+    dff = 2*PI * 1.5e6
     n_points   = 31
 
     bare_resonance = detunings[2]   # = detunings[2] as currently set
@@ -142,7 +146,7 @@ elif mode == "FREQ":
             pos, vel, beam_radii, powers, dets_scan, k_vecs,
             pol_vecs, quant_axis, mJ_targets,
             t_max=t_probe, dt=dt,
-            envelope=envelope,
+            envelope="SQUARE",
             envelope_params=ep,
         )
         pop_3P0[idx] = max(pops_s[3, :])   # 3P0 population at end of probe pulse
