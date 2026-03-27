@@ -459,6 +459,214 @@ def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
     return tlist, avg_population
 
 
+def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
+                                         powers, detunings, k_vecs,
+                                         pol_vecs, quant_axis, mJ_targets,
+                                         t_max=20e-6, dt=10e-9,
+                                         n_shots=None,
+                                         envelope='SQUARE',
+                                         envelope_params=None,
+                                         ensemble_params=None):
+    """
+    Simulate three-photon Rabi dynamics for the 1S0–3P1–3S1–3P0 ladder in Sr-88.
+
+    Four-level system (basis index → state):
+        0: 1S0   (ground state)
+        1: 3P1   (first intermediate, typically mJ=+1)
+        2: 3S1   (second intermediate)
+        3: 3P0   (target state)
+
+    Beams:
+        beam_0 (689 nm): 1S0 → 3P1
+        beam_1 (688 nm): 3P1 → 3S1
+        beam_2 (679 nm): 3S1 → 3P0
+
+    RWA Hamiltonian (ħ = 1):
+        H_det  = −Δ₀|1⟩⟨1| − (Δ₀+Δ₁)|2⟩⟨2| − (Δ₀+Δ₁+Δ₂)|3⟩⟨3|
+        H_drv  = Ω₀(t)/2 · (|0⟩⟨1|+h.c.)
+               + Ω₁(t)/2 · (|1⟩⟨2|+h.c.)
+               + Ω₂(t)/2 · (|2⟩⟨3|+h.c.)
+
+    where Δᵢ = detunings[i] + Doppler_i (Doppler shift = −kᵢ·v).
+    The cumulative rotating-frame energies are:
+        level 1: −Δ₀
+        level 2: −(Δ₀+Δ₁)
+        level 3: −(Δ₀+Δ₁+Δ₂)
+
+    Spontaneous decay Lindblad operators:
+        √Γ₆₈₉ · |0⟩⟨1|     3P1 → 1S0
+        √Γ₆₈₈ · |1⟩⟨2|     3S1 → 3P1  (partial A-coefficient)
+        √Γ₆₇₉ · |3⟩⟨2|     3S1 → 3P0  (partial A-coefficient)
+
+    Note: the 3S1→3P2 channel (~707 nm) is not modelled; remaining 3S1
+    population that would decay that way is treated as not decaying.
+
+    Modes:
+        SQUARE          — constant H, returns full time trace of P(3P0).
+        ERF / GAUSSIAN / BLACKMAN — shot-by-shot scan; each tlist element is
+                          a pulse duration; returns P(3P0) after each shot.
+
+    Args:
+        positions      (ndarray): Atom positions, shape (N, 3) [m].
+        velocities     (ndarray): Atom velocities, shape (N, 3) [m/s].
+        beam_radii     (tuple):   1/e^2 beam radii (w0, w1, w2) [m].
+        powers         (tuple):   Beam powers (P0, P1, P2) [W].
+        detunings      (list):    Residual laser detunings [rad/s]; detunings[i]
+                                  is the detuning of beam i from its transition
+                                  (after accounting for Zeeman tuning).
+        k_vecs         (tuple):   Wavevectors (k0, k1, k2) [rad/m].
+        pol_vecs       (tuple):   Polarization unit vectors (eps0, eps1, eps2).
+        quant_axis     (ndarray): Quantization axis unit vector, shape (3,).
+        mJ_targets     (tuple):   Polarization selection (delta_mJ) per beam:
+                                  +1 = sigma+, 0 = pi, -1 = sigma−.
+        t_max          (float):   Max time or pulse duration [s].
+        dt             (float):   Time step [s].
+        envelope       (str):     'SQUARE', 'ERF', 'GAUSSIAN', or 'BLACKMAN'.
+        envelope_params (dict or None): Same as one-photon version.
+        ensemble_params (dict or None): Same as one-photon version.
+
+    Returns:
+        tlist           (ndarray): Time / pulse-duration axis [s].
+        avg_populations (ndarray): Ensemble-averaged state populations,
+                                   shape (4, n_steps). Rows correspond to
+                                   1S0 (0), 3P1 (1), 3S1 (2), 3P0 (3).
+    """
+    # For shaped modes, n_shots sets how many pulse durations to simulate (the
+    # "experimental shots").  dt still controls the internal mesolve resolution.
+    # For SQUARE mode n_shots is ignored — dt governs the output time grid.
+    if n_shots is not None and envelope != 'SQUARE':
+        n_steps = n_shots
+    else:
+        n_steps = int(t_max / dt) + 1
+    tlist = np.linspace(0, t_max, n_steps)
+
+    # 4-level basis
+    dim  = 4
+    b    = [qt.basis(dim, i) for i in range(dim)]   # b[0]=1S0, b[1]=3P1, b[2]=3S1, b[3]=3P0
+    rho0 = b[0] * b[0].dag()                         # atoms start in 1S0
+
+    # Coupling operators (off-diagonal blocks, symmetric)
+    H_01 = 0.5 * (b[0] * b[1].dag() + b[1] * b[0].dag())   # 1S0 ↔ 3P1
+    H_12 = 0.5 * (b[1] * b[2].dag() + b[2] * b[1].dag())   # 3P1 ↔ 3S1
+    H_23 = 0.5 * (b[2] * b[3].dag() + b[3] * b[2].dag())   # 3S1 ↔ 3P0
+
+    # Diagonal projectors (for building H_det and as observables)
+    proj  = [b[i] * b[i].dag() for i in range(dim)]
+    e_ops = proj   # track all 4 state populations
+
+    # Spontaneous decay Lindblad operators
+    c_ops = [
+        np.sqrt(gamma_689) * b[0] * b[1].dag(),   # 3P1 → 1S0
+        np.sqrt(gamma_688) * b[1] * b[2].dag(),   # 3S1 → 3P1
+        np.sqrt(gamma_679) * b[3] * b[2].dag(),   # 3S1 → 3P0
+    ]
+
+    # ------------------------------------------------------------------ #
+    # SQUARE: constant-H mesolve, return full time trace                  #
+    # ------------------------------------------------------------------ #
+    if envelope == 'SQUARE':
+        N_atoms         = positions.shape[0]
+        avg_populations = np.zeros((4, n_steps))
+        par             = get_calculated_parameters(
+            positions, velocities, k_vecs, powers,
+            beam_radii, pol_vecs, quant_axis, mJ_targets)
+
+        for i in range(N_atoms):
+            d0   = par['beam_0']['dshift'][i] + detunings[0]
+            d01  = d0  + par['beam_1']['dshift'][i] + detunings[1]
+            d012 = d01 + par['beam_2']['dshift'][i] + detunings[2]
+            O0   = par['beam_0']['Omega'][i]
+            O1   = par['beam_1']['Omega'][i]
+            O2   = par['beam_2']['Omega'][i]
+
+
+            H_det  = -d0 * proj[1] - d01 * proj[2] - d012 * proj[3]
+            H_sys  = H_det + O0 * H_01 + O1 * H_12 + O2 * H_23
+            result = qt.mesolve(H_sys, rho0, tlist, c_ops, e_ops=e_ops)
+            avg_populations += np.array(result.expect)   # shape (4, n_steps)
+
+        return tlist, avg_populations / N_atoms
+
+    # ------------------------------------------------------------------ #
+    # SHAPED: shot-by-shot scan over pulse durations                      #
+    # ------------------------------------------------------------------ #
+    if envelope not in ('ERF', 'GAUSSIAN', 'BLACKMAN'):
+        raise ValueError(f"Unknown envelope '{envelope}'. "
+                         "Choose from: SQUARE, ERF, GAUSSIAN, BLACKMAN.")
+
+    ep = envelope_params or {}
+    t0 = ep.get('t0', 0.0)
+
+    avg_populations = np.zeros((4, n_steps))
+
+    for i, t_pulse in enumerate(tqdm(tlist, desc=f'shots ({envelope} 3γ)')):
+
+        # --- Atomic ensemble for this shot ---
+        if ensemble_params is not None:
+            pos_i, vel_i = sample_atomic_ensemble(
+                radii=ensemble_params['radii'],
+                temperatures=ensemble_params['temperatures'],
+                mass=ensemble_params.get('mass', 88 * AMU),
+                n_samples=ensemble_params['n_atoms'],
+            )
+        else:
+            pos_i, vel_i = positions, velocities
+
+        N_atoms_i = pos_i.shape[0]
+        par_i     = get_calculated_parameters(
+            pos_i, vel_i, k_vecs, powers,
+            beam_radii, pol_vecs, quant_axis, mJ_targets)
+
+        if t_pulse == 0.0:
+            avg_populations[:, i] = 0.0
+            continue
+
+        # --- Simulation time window ---
+        if envelope in ('ERF', 'GAUSSIAN'):
+            t_start = t0 - 150e-9
+            t_end   = t0 + t_pulse + 100e-9
+        else:
+            t_start = t0
+            t_end   = t0 + t_pulse
+
+        n_sim     = max(2, int((t_end - t_start) / dt) + 1)
+        tlist_sim = np.linspace(t_start, t_end, n_sim)
+
+        shot_pop = np.zeros(4)
+        for j in range(N_atoms_i):
+            d0   = par_i['beam_0']['dshift'][j] + detunings[0]
+            d01  = d0  + par_i['beam_1']['dshift'][j] + detunings[1]
+            d012 = d01 + par_i['beam_2']['dshift'][j] + detunings[2]
+            O0   = par_i['beam_0']['Omega'][j]
+            O1   = par_i['beam_1']['Omega'][j]
+            O2   = par_i['beam_2']['Omega'][j]
+
+            H_det = -d0 * proj[1] - d01 * proj[2] - d012 * proj[3]
+            
+
+            if envelope == 'ERF':
+                sigma_ep = ep.get('sigma', 90e-9)
+                c0, _ = erf_rabi_envelope(t0, sigma_ep, t_pulse, Omega_peak=O0)
+                c1, _ = erf_rabi_envelope(t0, sigma_ep, t_pulse, Omega_peak=O1)
+                c2, _ = erf_rabi_envelope(t0, sigma_ep, t_pulse, Omega_peak=O2)
+            elif envelope == 'GAUSSIAN':
+                c0, _ = gaussian_rabi_envelope(t0, t_pulse, Omega_peak=O0)
+                c1, _ = gaussian_rabi_envelope(t0, t_pulse, Omega_peak=O1)
+                c2, _ = gaussian_rabi_envelope(t0, t_pulse, Omega_peak=O2)
+            else:  # BLACKMAN
+                c0, _ = blackman_rabi_envelope(t0, t_pulse, Omega_peak=O0)
+                c1, _ = blackman_rabi_envelope(t0, t_pulse, Omega_peak=O1)
+                c2, _ = blackman_rabi_envelope(t0, t_pulse, Omega_peak=O2)
+
+            H_sys  = [H_det, [H_01, c0], [H_12, c1], [H_23, c2]]
+            result = qt.mesolve(H_sys, rho0, tlist_sim, c_ops, e_ops=e_ops)
+            shot_pop += np.array([result.expect[k][-1] for k in range(4)])
+
+        avg_populations[:, i] = shot_pop / N_atoms_i
+
+    return tlist, avg_populations
+
+
 def erf_rabi_envelope(t0, sigma, t_pulse, Omega_peak=1.0):
     """
     Returns a QuTiP-compatible coefficient function  f(t, args)  that gives
