@@ -109,8 +109,8 @@ if mode == "TIME":
     )
 
     fig, ax = plt.subplots(figsize=(8, 4))
-    state_labels = ['1S0', '3P1', '3S1', '3P0']
-    colors       = ['C0', 'C1', 'C2', 'C3']
+    state_labels = ['1S0', '3P1', '3P0', '3P2']
+    colors       = ['C0', 'C1', 'C3', 'C4']
     for k in range(4):
         ax.scatter(tlist * 1e6, pops[k], color=colors[k], label=state_labels[k])
     ax.set_xlabel('Time [µs]')
@@ -146,7 +146,7 @@ elif mode == "FREQ":
             envelope="SQUARE",
             envelope_params=ep,
         )
-        pop_3P0[idx] = max(pops_s[3, :])   # 3P0 population at end of probe pulse
+        pop_3P0[idx] = max(pops_s[2, :])   # 3P0 population (row 2: 1S0, 3P1, 3P0, 3P2)
 
     # x-axis: offset of detunings[2] from bare resonance [MHz]
     x_MHz     = (scan_d2 - bare_resonance) / (2*PI) * 1e-6

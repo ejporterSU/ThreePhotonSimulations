@@ -22,6 +22,7 @@ MU_B = const.physical_constants['Bohr magneton'][0]  # Bohr magneton [J/T]
 gamma_689, lambda_689 = 2*PI * 7.48e3,  689.4489e-9
 gamma_688, lambda_688 = 2*PI * 3.90e6,  688.020770e-9
 gamma_679, lambda_679 = 2*PI * 1.26e6,  679.288943e-9
+gamma_707, lambda_707 = 2*PI * 6.225e6, 707.197215e-9  # 3S1 → 3P2 (~707 nm), dominant loss channel
 
 # Lande g-factors
 G_J_3P1 = 3/2   # 3P1 excited state
@@ -529,7 +530,8 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
         tlist           (ndarray): Time / pulse-duration axis [s].
         avg_populations (ndarray): Ensemble-averaged state populations,
                                    shape (4, n_steps). Rows correspond to
-                                   1S0 (0), 3P1 (1), 3S1 (2), 3P0 (3).
+                                   1S0 (0), 3P1 (1), 3P0 (2), 3P2 (3).
+                                   3S1 is not tracked (decays on ns timescales).
     """
     # For shaped modes, n_shots sets how many pulse durations to simulate (the
     # "experimental shots").  dt still controls the internal mesolve resolution.
@@ -540,25 +542,26 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
         n_steps = int(t_max / dt) + 1
     tlist = np.linspace(0, t_max, n_steps)
 
-    # 4-level basis
-    dim  = 4
-    b    = [qt.basis(dim, i) for i in range(dim)]   # b[0]=1S0, b[1]=3P1, b[2]=3S1, b[3]=3P0
+    # 5-level basis: b[4] = 3P2 is a metastable sink (no H couplings, no outgoing decay)
+    dim  = 5
+    b    = [qt.basis(dim, i) for i in range(dim)]   # b[0]=1S0, b[1]=3P1, b[2]=3S1, b[3]=3P0, b[4]=3P2
     rho0 = b[0] * b[0].dag()                         # atoms start in 1S0
 
-    # Coupling operators (off-diagonal blocks, symmetric)
+    # Coupling operators (off-diagonal blocks, symmetric; 3P2 is never driven)
     H_01 = 0.5 * (b[0] * b[1].dag() + b[1] * b[0].dag())   # 1S0 ↔ 3P1
     H_12 = 0.5 * (b[1] * b[2].dag() + b[2] * b[1].dag())   # 3P1 ↔ 3S1
     H_23 = 0.5 * (b[2] * b[3].dag() + b[3] * b[2].dag())   # 3S1 ↔ 3P0
 
-    # Diagonal projectors (for building H_det and as observables)
+    # Diagonal projectors; track 1S0, 3P1, 3P0, 3P2 — skip 3S1 (fast intermediate)
     proj  = [b[i] * b[i].dag() for i in range(dim)]
-    e_ops = proj   # track all 4 state populations
+    e_ops = [proj[0], proj[1], proj[3], proj[4]]   # rows: 1S0, 3P1, 3P0, 3P2
 
     # Spontaneous decay Lindblad operators
     c_ops = [
-        np.sqrt(gamma_689) * b[0] * b[1].dag(),   # 3P1 → 1S0
-        np.sqrt(gamma_688) * b[1] * b[2].dag(),   # 3S1 → 3P1
-        np.sqrt(gamma_679) * b[3] * b[2].dag(),   # 3S1 → 3P0
+        np.sqrt(gamma_689)         * b[0] * b[1].dag(),   # 3P1 → 1S0
+        np.sqrt(gamma_688)         * b[1] * b[2].dag(),   # 3S1 → 3P1
+        np.sqrt(gamma_679)         * b[3] * b[2].dag(),   # 3S1 → 3P0
+        np.sqrt(gamma_707)         * b[4] * b[2].dag(),   # 3S1 → 3P2 (metastable sink)
     ]
 
     # ------------------------------------------------------------------ #
