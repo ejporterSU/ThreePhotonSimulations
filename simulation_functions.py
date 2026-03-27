@@ -873,6 +873,348 @@ def test_envelopes(t, widths, envelope):
     plt.show()
 
 
+# ============================================================
+# NEW: Strategies A + B + C
+#   A — numpy/scipy Liouvillian instead of QuTiP mesolve
+#   B — all atoms batched into a single ODE per shot
+#   C — joblib parallelism across shots (ERF/GAUSSIAN/BLACKMAN modes)
+#
+# All new names carry the _new suffix.  No existing code is modified.
+# ============================================================
+
+from scipy.integrate import solve_ivp as _solve_ivp_new
+from joblib import Parallel as _Parallel_new, delayed as _delayed_new
+
+# ── Pre-built 5-level numpy matrices (computed once at import) ─────────── #
+_d5  = 5
+_d25 = _d5 * _d5
+_I5  = np.eye(_d5, dtype=complex)
+
+
+def _ket5_new(i):
+    v = np.zeros(_d5, dtype=complex); v[i] = 1.0; return v
+
+
+# Projectors |i><i| and coupling operators |i><j|+h.c. (all 5×5 complex)
+_PROJ5_NP  = np.array([np.outer(_ket5_new(i), _ket5_new(i).conj())
+                        for i in range(_d5)])          # shape (5, 5, 5)
+_H01_NP    = 0.5 * (np.outer(_ket5_new(0), _ket5_new(1).conj()) +
+                     np.outer(_ket5_new(1), _ket5_new(0).conj()))
+_H12_NP    = 0.5 * (np.outer(_ket5_new(1), _ket5_new(2).conj()) +
+                     np.outer(_ket5_new(2), _ket5_new(1).conj()))
+_H23_NP    = 0.5 * (np.outer(_ket5_new(2), _ket5_new(3).conj()) +
+                     np.outer(_ket5_new(3), _ket5_new(2).conj()))
+
+# Collapse operators: same decay channels as the QuTiP version
+_COPS5_NP  = [
+    np.sqrt(gamma_689) * np.outer(_ket5_new(0), _ket5_new(1).conj()),  # 3P1→1S0
+    np.sqrt(gamma_688) * np.outer(_ket5_new(1), _ket5_new(2).conj()),  # 3S1→3P1
+    np.sqrt(gamma_679) * np.outer(_ket5_new(3), _ket5_new(2).conj()),  # 3S1→3P0
+    np.sqrt(gamma_707) * np.outer(_ket5_new(4), _ket5_new(2).conj()),  # 3S1→3P2
+]
+
+
+def build_liouvillian_numpy(H_np, c_ops_list):
+    """
+    Build the d²×d² Liouvillian superoperator (Strategy A).
+
+    Uses row-major vectorization: d/dt vec(ρ) = L @ vec(ρ),
+    where vec(ρ) = ρ.flatten() (C order).
+
+    Row-major Kronecker identities:
+        vec(AρB)    = (A ⊗ B^T) vec(ρ)
+        L_coherent  = −i (H ⊗ I − I ⊗ H^T)
+        L_jump_k    =  C_k ⊗ C_k* − ½(C_k†C_k ⊗ I) − ½(I ⊗ (C_k†C_k)^T)
+
+    Populations are on the diagonal: ρ[k,k] = vec(ρ)[k*d + k].
+
+    Args:
+        H_np       (ndarray): Hamiltonian, shape (d, d), complex.
+        c_ops_list (list):    Collapse operators, each shape (d, d), complex.
+
+    Returns:
+        L (ndarray): Liouvillian, shape (d², d²), complex.
+    """
+    d = H_np.shape[0]
+    I = np.eye(d, dtype=complex)
+    L = -1j * (np.kron(H_np, I) - np.kron(I, H_np.T))
+    for c in c_ops_list:
+        cdc = c.conj().T @ c
+        L += np.kron(c, c.conj()) - 0.5 * np.kron(cdc, I) - 0.5 * np.kron(I, cdc.T)
+    return L
+
+
+# Coherent Liouvillian for a single operator (no c_ops)
+def _coh_L_new(H):
+    d = H.shape[0]; I = np.eye(d, dtype=complex)
+    return -1j * (np.kron(H, I) - np.kron(I, H.T))
+
+
+# Pre-built Liouvillian blocks — computed once at import time
+_L_DISS_NP   = np.zeros((_d25, _d25), dtype=complex)
+for _c in _COPS5_NP:
+    _cdc = _c.conj().T @ _c
+    _L_DISS_NP += (np.kron(_c, _c.conj())
+                   - 0.5 * np.kron(_cdc, _I5)
+                   - 0.5 * np.kron(_I5, _cdc.T))
+
+_L_H01_NP    = _coh_L_new(_H01_NP)                             # (25, 25)
+_L_H12_NP    = _coh_L_new(_H12_NP)
+_L_H23_NP    = _coh_L_new(_H23_NP)
+_L_PROJ5_NP  = np.array([_coh_L_new(_PROJ5_NP[i])
+                          for i in range(_d5)])                 # (5, 25, 25)
+
+# Initial density-matrix vector: ρ = |0><0|, flattened row-major → index 0
+_RHO0_VEC_NP = np.zeros(_d25, dtype=complex)
+_RHO0_VEC_NP[0] = 1.0
+
+
+def _extract_pops_new(rho_flat_batch, N_atoms):
+    """
+    Extract ensemble-averaged populations for states 0,1,3,4 from a
+    flattened batch density-matrix vector of shape (N_atoms * d25,).
+
+    Returns ndarray of shape (4,).
+    """
+    d  = _d5
+    d2 = _d25
+    pop = np.zeros(4)
+    for row, k in enumerate([0, 1, 3, 4]):
+        idxs = np.arange(N_atoms) * d2 + k * d + k
+        pop[row] = np.real(rho_flat_batch[idxs]).mean()
+    return pop
+
+
+def _build_L_batches_new(d0_arr, d01_arr, d012_arr, O0_arr, O1_arr, O2_arr):
+    """
+    Vectorised construction of per-atom Liouvillians (Strategy B).
+
+    Exploits linearity of L in H:
+        L_i = L_diss
+              − d0_i·L(P₁) − d01_i·L(P₂) − d012_i·L(P₃)
+              + O0_i·L(H₀₁) + O1_i·L(H₁₂) + O2_i·L(H₂₃)
+
+    All Kronecker products are precomputed at module level; this function
+    only does broadcasting + addition of (N, 25, 25) arrays.
+
+    Returns
+        L_static (N, 25, 25): detuning + decay part (time-independent)
+        L_td     (N, 25, 25): coupling part (scaled by shape function in ERF mode)
+    """
+    sh = (len(d0_arr), 1, 1)
+    L_static = (
+        _L_DISS_NP[np.newaxis]
+        - d0_arr.reshape(sh)   * _L_PROJ5_NP[1][np.newaxis]
+        - d01_arr.reshape(sh)  * _L_PROJ5_NP[2][np.newaxis]
+        - d012_arr.reshape(sh) * _L_PROJ5_NP[3][np.newaxis]
+    )
+    L_td = (
+        O0_arr.reshape(sh) * _L_H01_NP[np.newaxis]
+        + O1_arr.reshape(sh) * _L_H12_NP[np.newaxis]
+        + O2_arr.reshape(sh) * _L_H23_NP[np.newaxis]
+    )
+    return L_static, L_td
+
+
+def _make_shape_fn_new(envelope, t0_ep, t_pulse, ep):
+    """Return the normalized scalar shape function s(t) ∈ [0,1] for one shot."""
+    if envelope == 'ERF':
+        sigma = ep.get('sigma', 90e-9)
+        t_on  = t0_ep + 50e-9
+        t_off = t0_ep + t_pulse - 55e-9
+        def shape(t):
+            rise = 0.5 * (1.0 + erf((t - t_on)  /  sigma))
+            fall = 0.5 * (1.0 - erf((t - t_off) / (sigma * 0.65)))
+            return np.sqrt(np.maximum(rise * fall, 0.0))
+    elif envelope == 'GAUSSIAN':
+        center = t0_ep + t_pulse / 2
+        sig_g  = t_pulse / 4
+        def shape(t):
+            return np.exp(-0.5 * ((np.asarray(t) - center) / sig_g) ** 2)
+    else:  # BLACKMAN
+        t_end = t0_ep + t_pulse
+        def shape(t):
+            t   = np.asarray(t)
+            msk = (t >= t0_ep) & (t <= t_end)
+            ph  = 2 * PI * (t - t0_ep) / t_pulse
+            return np.where(msk, 0.42 - 0.5 * np.cos(ph) + 0.08 * np.cos(2 * ph), 0.0)
+    return shape
+
+
+def _run_one_shot_new(t_pulse, L_static_b, L_td_b, rho0_b, N_s,
+                       envelope, t0_ep, ep):
+    """
+    Integrate one shaped-pulse shot for all N_s atoms simultaneously (Strategy B).
+
+    The batched ODE state has shape (N_s * 25,).  L_static_b and L_td_b
+    have shape (N_s, 25, 25).  The shape function s(t) is a scalar evaluated
+    once per ODE step, so the cost is dominated by two (N_s, 25, 25) @ (N_s, 25)
+    batched matmuls per step — implemented as np.matmul on 3-D arrays.
+
+    Returns pop : ndarray shape (4,) — ensemble-averaged populations for
+                  states 0 (1S0), 1 (3P1), 3 (3P0), 4 (3P2).
+    """
+    if t_pulse == 0.0:
+        return np.zeros(4)
+    # ERF short-circuit: AOM doesn't open for < 50 ns (mirrors erf_rabi_envelope)
+    if envelope == 'ERF' and t_pulse < 50e-9:
+        return np.zeros(4)
+
+    shape = _make_shape_fn_new(envelope, t0_ep, t_pulse, ep)
+
+    if envelope in ('ERF', 'GAUSSIAN'):
+        t_start = t0_ep - 150e-9
+        t_end_s = t0_ep + t_pulse + 100e-9
+    else:
+        t_start = t0_ep
+        t_end_s = t0_ep + t_pulse
+
+    d2 = _d25
+
+    def rhs(t, state):
+        rho  = state.reshape(N_s, d2)
+        s    = float(np.real(shape(t)))
+        # batched matmul: (N_s,25,25)@(N_s,25,1) → (N_s,25)
+        drho = np.matmul(L_static_b, rho[:, :, np.newaxis]).squeeze(-1)
+        drho = drho + s * np.matmul(L_td_b, rho[:, :, np.newaxis]).squeeze(-1)
+        return drho.flatten()
+
+    sol = _solve_ivp_new(
+        rhs,
+        [t_start, t_end_s],
+        rho0_b,
+        method='RK45',
+        rtol=1e-6, atol=1e-8,
+        dense_output=False,
+    )
+    return _extract_pops_new(sol.y[:, -1], N_s)
+
+
+def simulate_three_photon_rabi_dynamics_new(
+        positions, velocities, beam_radii, powers, detunings, k_vecs,
+        pol_vecs, quant_axis, mJ_targets,
+        t_max=20e-6, dt=10e-9, n_shots=None,
+        envelope='SQUARE', envelope_params=None, ensemble_params=None,
+        n_jobs=1):
+    """
+    Fast drop-in replacement for simulate_three_photon_rabi_dynamics.
+
+    Implements Strategies A, B, C from planning.md:
+      A — numpy/scipy Liouvillian superoperator instead of QuTiP mesolve
+      B — all N atoms batched into one ODE per shot (vectorised matmul RHS)
+      C — shots parallelised with joblib (ERF/GAUSSIAN/BLACKMAN modes only)
+
+    Extra parameter vs. original:
+        n_jobs (int): joblib workers for shot-level parallelism.
+                      1 = sequential (safe default).
+                     -1 = use all logical CPU cores.
+
+    Returns same (tlist, avg_populations) shape as the original.
+    """
+    d  = _d5
+    d2 = _d25
+
+    if n_shots is not None and envelope != 'SQUARE':
+        n_steps = n_shots
+    else:
+        n_steps = int(t_max / dt) + 1
+    tlist = np.linspace(0, t_max, n_steps)
+
+    # ── SQUARE mode: constant H per atom — single batched ODE ─────────── #
+    if envelope == 'SQUARE':
+        N_atoms = positions.shape[0]
+        par = get_calculated_parameters(
+            positions, velocities, k_vecs, powers,
+            beam_radii, pol_vecs, quant_axis, mJ_targets)
+
+        d0_arr   = par['beam_0']['dshift'] + detunings[0]
+        d01_arr  = d0_arr  + par['beam_1']['dshift'] + detunings[1]
+        d012_arr = d01_arr + par['beam_2']['dshift'] - detunings[2]
+        O0_arr   = par['beam_0']['Omega']
+        O1_arr   = par['beam_1']['Omega']
+        O2_arr   = par['beam_2']['Omega']
+
+        # SQUARE: static + td parts are always summed (s=1 always)
+        L_static, L_td = _build_L_batches_new(
+            d0_arr, d01_arr, d012_arr, O0_arr, O1_arr, O2_arr)
+        L_batch = L_static + L_td   # (N_atoms, 25, 25), fully constant
+
+        rho0_batch = np.tile(_RHO0_VEC_NP, N_atoms)  # (N_atoms*25,)
+
+        def _rhs_square(t, state):
+            rho  = state.reshape(N_atoms, d2)
+            drho = np.matmul(L_batch, rho[:, :, np.newaxis]).squeeze(-1)
+            return drho.flatten()
+
+        sol = _solve_ivp_new(
+            _rhs_square,
+            [tlist[0], tlist[-1]],
+            rho0_batch,
+            method='RK45',
+            t_eval=tlist,
+            rtol=1e-8, atol=1e-10,
+            dense_output=False,
+        )
+
+        avg_pops = np.zeros((4, n_steps))
+        for row, k in enumerate([0, 1, 3, 4]):
+            idxs = np.arange(N_atoms) * d2 + k * d + k
+            avg_pops[row] = np.real(sol.y[idxs, :]).mean(axis=0)
+        return tlist, avg_pops
+
+    # ── SHAPED (ERF / GAUSSIAN / BLACKMAN) mode ───────────────────────── #
+    if envelope not in ('ERF', 'GAUSSIAN', 'BLACKMAN'):
+        raise ValueError(f"Unknown envelope '{envelope}'. "
+                         "Choose from: SQUARE, ERF, GAUSSIAN, BLACKMAN.")
+
+    ep    = envelope_params or {}
+    t0_ep = ep.get('t0', 0.0)
+
+    # Build per-shot atomic ensembles and their Liouvillian batches
+    shot_matrices = []
+    for idx in range(n_steps):
+        if ensemble_params is not None:
+            pos_i, vel_i = sample_atomic_ensemble(
+                radii=ensemble_params['radii'],
+                temperatures=ensemble_params['temperatures'],
+                mass=ensemble_params.get('mass', 88 * AMU),
+                n_samples=ensemble_params['n_atoms'],
+            )
+            pos_i = np.atleast_2d(pos_i)
+            vel_i = np.atleast_2d(vel_i)
+        else:
+            pos_i = np.atleast_2d(positions)
+            vel_i = np.atleast_2d(velocities)
+
+        N_s = pos_i.shape[0]
+        par_i = get_calculated_parameters(
+            pos_i, vel_i, k_vecs, powers,
+            beam_radii, pol_vecs, quant_axis, mJ_targets)
+
+        d0_s   = par_i['beam_0']['dshift'] + detunings[0]
+        d01_s  = d0_s  + par_i['beam_1']['dshift'] + detunings[1]
+        d012_s = d01_s + par_i['beam_2']['dshift'] - detunings[2]
+        O0_s   = par_i['beam_0']['Omega']
+        O1_s   = par_i['beam_1']['Omega']
+        O2_s   = par_i['beam_2']['Omega']
+
+        L_stat, L_td = _build_L_batches_new(
+            d0_s, d01_s, d012_s, O0_s, O1_s, O2_s)
+        rho0_b = np.tile(_RHO0_VEC_NP, N_s)
+        shot_matrices.append((L_stat, L_td, rho0_b, N_s))
+
+    # Strategy C: parallelise shots with joblib
+    pop_list = _Parallel_new(n_jobs=n_jobs)(
+        _delayed_new(_run_one_shot_new)(
+            t_pulse, L_stat, L_td, rho0_b, N_s, envelope, t0_ep, ep)
+        for t_pulse, (L_stat, L_td, rho0_b, N_s)
+        in zip(tlist, shot_matrices)
+    )
+
+    avg_populations = np.array(pop_list).T   # (4, n_steps)
+    return tlist, avg_populations
+
+
 if __name__ == '__main__':
     pass
     # t = np.linspace(-0.5e-6, 2.5e-6, 1000)
