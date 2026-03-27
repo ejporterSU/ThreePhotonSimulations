@@ -33,18 +33,15 @@ mJ_targets = (+1, -1, 0 )
 
 # --- laser powers ---
 pd_mv_689 = 85
-pd_mv_679 = 97
+pd_mv_679 = 33
 pd_mv_688 = 80
 
 P_689        = 1e-3*(0.229*pd_mv_689 - 0.586 )   # 689 nm peak power [W]
-P_688        = 1e-3*(0.133*pd_mv_689 + 0.471 ) # 688 nm peak power [W]  (placeholder)
-P_679        = 1e-3*(0.146*pd_mv_689 - 0.008 )   # 679 nm peak power [W]  (placeholder)
-
-P_689 = 20e-3  
-P_688 = 8e-3
-P_679 = 2e-3
+P_679        = 1e-3*(0.146*pd_mv_679 + 0.008 )   # 679 nm peak power [W]  (placeholder)
+P_688        = 1e-3*(0.133*pd_mv_688 + 0.471 ) # 688 nm peak power [W]  (placeholder)
 
 powers = [P_689, P_688, P_679]
+
 print(f"Powers \n689: {P_689*1e3:.2f} mW\n688: {P_688*1e3:.2f} mW\n679: {P_679*1e3:.2f} mW")
 
 B_field_G = 20
@@ -54,7 +51,7 @@ delta_zeeman_689 = get_zeeman_detuning(G_J_3P1, mJ_targets[0], B_field_T)
 # --- residual detunings (laser already tuned near Zeeman-shifted transitions) ---
 detuning_mj1 = 2*PI * 5.0e6  # detuning from 3p1, mj=1 <-> 3s1
 detuning_0   = delta_zeeman_689 + detuning_mj1       # 689 nm detuning from 1S0→3P1(mJ=0) [rad/s]
-detuning_2   = 2*PI * -353.0e6        # 679 nm detuning from 3S1→3P0         [rad/s]
+detuning_2   = 2*PI * -400e6        # 679 nm detuning from 3S1→3P0         [rad/s]
 detunings = [detuning_mj1, 
              detuning_2 - detuning_mj1, 
              detuning_2]
@@ -78,11 +75,11 @@ w0_688       = 0.9e-3       # 688 nm 1/e^2 radius [m]
 w0_679       = 0.9e-3       # 679 nm 1/e^2 radius [m]
 beam_radii = [w0_689, w0_688, w0_679]
 # --- simulation ---
-T_MAX   = 3e-6
-dt      = 10e-9
+T_MAX   = 10e-6
+dt      = 50e-9
 N_atoms = 50
 t_push = 0.8e-6
-n_shots = 20
+n_shots = 50
 # --- misc params ---
 
 sigma_aom = 90e-9
@@ -94,9 +91,9 @@ pos, vel = sample_atomic_ensemble(cloud_radii, temperatures, n_samples=1)
 pos = np.atleast_2d(pos)
 vel = np.atleast_2d(vel)
 
-mode="FREQ" # "TIME" for time scan(normal rabi flopping)
+mode="TIME" # "TIME" for time scan(normal rabi flopping)
             # "FREQ" for frequency scans to find stark shift
-delta_AC = 2*PI * 1e6 * 0.9
+delta_AC = 2*PI * 1e6 * 0.982
 if mode == "TIME":
     det_temp = detunings
     det_temp[2] = det_temp[2] + delta_AC
@@ -131,9 +128,9 @@ elif mode == "FREQ":
     # Scan detunings[2] (679 nm) around the bare three-photon resonance to locate
     # the AC Stark-shifted resonance. All other detunings are held fixed.
     t_probe    = T_MAX           # fixed pulse time [s]; tune to ~quarter pi-time for contrast
-    dfi = 2*PI * 0.5e6     # scan ±50 MHz around the bare resonance
-    dff = 2*PI * 1.5e6
-    n_points   = 31
+    dfi = 2*PI * 0.97e6     # scan ±50 MHz around the bare resonance
+    dff = 2*PI * 0.99e6
+    n_points   = 51
 
     bare_resonance = detunings[2]   # = detunings[2] as currently set
     scan_d2 = np.linspace(bare_resonance + dfi,
@@ -156,7 +153,7 @@ elif mode == "FREQ":
     peak_idx  = np.argmax(pop_3P0)
     stark_MHz = x_MHz[peak_idx]
 
-    print(f"Simulated peak at Δ₂ offset = {stark_MHz:.2f} MHz  →  AC Stark shift ≈ {stark_MHz:.2f} MHz")
+    print(f"Simulated peak at Δ₂ offset = {stark_MHz:.4f} MHz  →  AC Stark shift ≈ {stark_MHz:.2f} MHz")
 
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.plot(x_MHz, pop_3P0, 'C3.-')
