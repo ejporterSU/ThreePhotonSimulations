@@ -124,7 +124,7 @@ print(f"  → Done in {t_old:.2f} s")
 print("\n[2/3] Running NEW method (numpy/scipy, n_jobs=1, Strategies A+B)...")
 t_start_new1 = time.perf_counter()
 
-tlist_new1, pops_new1 = simulate_three_photon_rabi_dynamics_new(
+tlist_new1, pops_new1, _ = simulate_three_photon_rabi_dynamics_new(
     pos, vel, beam_radii, powers, list(detunings), k_vecs,
     pol_vecs, quant_axis, mJ_targets,
     t_max=T_MAX, dt=dt,
@@ -141,7 +141,7 @@ print(f"  → Done in {t_new1:.2f} s")
 print("\n[3/3] Running NEW method (numpy/scipy, n_jobs=-1, Strategies A+B+C)...")
 t_start_new_par = time.perf_counter()
 
-tlist_new_par, pops_new_par = simulate_three_photon_rabi_dynamics_new(
+tlist_new_par, pops_new_par, _ = simulate_three_photon_rabi_dynamics_new(
     pos, vel, beam_radii, powers, list(detunings), k_vecs,
     pol_vecs, quant_axis, mJ_targets,
     t_max=T_MAX, dt=dt,

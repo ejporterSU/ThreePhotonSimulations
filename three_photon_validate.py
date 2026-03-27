@@ -41,6 +41,9 @@ P_689        = 1e-3*(0.229*pd_mv_689 - 0.586 )   # 689 nm peak power [W]
 P_679        = 1e-3*(0.146*pd_mv_679 + 0.008 )   # 679 nm peak power [W]  (placeholder)
 P_688        = 1e-3*(0.133*pd_mv_688 + 0.471 ) # 688 nm peak power [W]  (placeholder)
 
+# P_689 = 20e-3
+# P_688 = 0e-3
+# P_679 = 0.0e-3 # to bypass PD vals
 powers = [P_689, P_688, P_679]
 
 print(f"Powers \n689: {P_689*1e3:.2f} mW\n688: {P_688*1e3:.2f} mW\n679: {P_679*1e3:.2f} mW")
@@ -53,9 +56,11 @@ delta_zeeman_689 = get_zeeman_detuning(G_J_3P1, mJ_targets[0], B_field_T)
 detuning_mj1 = 2*PI * 5.0e6  # detuning from 3p1, mj=1 <-> 3s1
 detuning_0   = delta_zeeman_689 + detuning_mj1       # 689 nm detuning from 1S0→3P1(mJ=0) [rad/s]
 detuning_2   = 2*PI * -400e6        # 679 nm detuning from 3S1→3P0         [rad/s]
+
 detunings = [detuning_mj1, 
              detuning_2 - detuning_mj1, 
              detuning_2]
+# detunings = 2*PI * 1e6 * np.array([0.0, -400.0, -400.0]) # to bypass detuning setpoints
 
 
 print(rf"Zeeman Shift: dwB={delta_zeeman_689 * 1e-6 / (2*PI):.2f} MHz")
@@ -68,19 +73,19 @@ print(rf"""Input Detunings:
 sigma_aom    = 90e-9        # erf rise width [s]
 t0_aom       = 0.0
 # --- atomic cloud ---
-cloud_radii  = [0e-6, 0e-6, 0e-6]   # 1-sigma position widths [m]
-temperatures = [0e-6, 0e-6, 0e-6]   # thermal widths [K]
+cloud_radii  = [120e-6, 43e-6, 43e-6]   # 1-sigma position widths [m]
+temperatures = [6.5e-6, 6.5e-6, 2.5e-6]   # thermal widths [K]
 # --- beam waists ---
 w0_689       = 0.54e-3       # 689 nm 1/e^2 radius [m]
 w0_688       = 0.9e-3       # 688 nm 1/e^2 radius [m]
 w0_679       = 0.9e-3       # 679 nm 1/e^2 radius [m]
 beam_radii = [w0_689, w0_688, w0_679]
 # --- simulation ---
-T_MAX   = 10e-6
-dt      = 50e-9
-N_atoms = 500
+T_MAX   = 3e-6
+dt      = 20e-9
+N_atoms = 5
 t_push = 0.8e-6
-n_shots = 50
+n_shots = 100
 # --- misc params ---
 
 sigma_aom = 90e-9
@@ -94,13 +99,13 @@ vel = np.atleast_2d(vel)
 
 mode="TIME" # "TIME" for time scan(normal rabi flopping)
             # "FREQ" for frequency scans to find stark shift
-delta_AC = 2*PI * 1e6 * 0.982
+delta_AC = 2*PI * 1e6 * 0.98
 if mode == "TIME":
     det_temp = detunings
     det_temp[2] = det_temp[2] + delta_AC
 
     t0 = time.perf_counter()
-    tlist, pops = simulate_three_photon_rabi_dynamics_new(
+    tlist, pops, params = simulate_three_photon_rabi_dynamics_new(
         pos, vel, beam_radii, powers, det_temp, k_vecs,
         pol_vecs, quant_axis, mJ_targets,
         t_max=T_MAX, dt=dt,
@@ -110,12 +115,13 @@ if mode == "TIME":
     )
     print(f"simulate_three_photon_rabi_dynamics_new: {time.perf_counter()-t0:.2f} s  "
           f"({n_shots} shots, dt={dt*1e9:.0f} ns, T_MAX={T_MAX*1e6:.1f} µs)")
+    print_simulation_params(params)
 
     fig, ax = plt.subplots(figsize=(8, 4))
     state_labels = ['1S0', '3P1', '3P0', '3P2']
     colors       = ['C0', 'C1', 'C3', 'C4']
     for k in range(4):
-        ax.scatter(tlist * 1e6, pops[k], color=colors[k], label=state_labels[k])
+        ax.plot(tlist * 1e6, pops[k], color=colors[k], label=state_labels[k])
     ax.set_xlabel('Time [µs]')
     ax.set_ylabel('State population')
     ax.set_title(f'Three-photon ladder — Rabi flopping\n'
@@ -128,12 +134,15 @@ if mode == "TIME":
     plt.show()
 
 elif mode == "FREQ":
+    pos, vel = sample_atomic_ensemble(np.zeros((1,3)), np.zeros((1,3)), n_samples=1)
+    pos = np.atleast_2d(pos)
+    vel = np.atleast_2d(vel)
     # Scan detunings[2] (679 nm) around the bare three-photon resonance to locate
     # the AC Stark-shifted resonance. All other detunings are held fixed.
     t_probe    = T_MAX           # fixed pulse time [s]; tune to ~quarter pi-time for contrast
-    dfi = 2*PI * 0.97e6     # scan ±50 MHz around the bare resonance
-    dff = 2*PI * 0.99e6
-    n_points   = 51
+    dfi = 2*PI * 0.955e6     # scan ±50 MHz around the bare resonance
+    dff = 2*PI * 1e6
+    n_points   = 21
 
     bare_resonance = detunings[2]   # = detunings[2] as currently set
     scan_d2 = np.linspace(bare_resonance + dfi,
