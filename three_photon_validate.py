@@ -4,6 +4,20 @@ import matplotlib.pyplot as plt
 import time
 from simulation_functions import *
 
+def pd_mv_to_power(beam, pd_mv):
+    """
+     converts photodiode read value to output power in W
+     for each of the three beam options
+    """
+    if beam == '689':
+        return 1e-3*(0.229*pd_mv - 0.586 ) 
+    elif beam == '688':
+        return 1e-3*(0.133*pd_mv + 0.471 )
+    elif beam == '679':
+        return 1e-3*(0.146*pd_mv + 0.008 )
+    else:
+        raise Exception("Not valid beam")
+
 # ── Fixed geometry ───────────────────────────────────────────────────────── #
 # Beam propagation angles
 theta_0,  theta_0z = np.radians(59.4384), 0.0   # 689 nm
@@ -27,93 +41,84 @@ pol_vecs = (
     np.array([0.0, 0.0,  1.0]),   # 688 nm: z-hat
     np.array([-1.0, 0.0,  0.0]),   # 679 nm: -x-hat (parallel to quant axis → pure pi)
 )
-
 # mJ_target = polarization selection (delta_mJ) for coupling factor:
 #   +1 = sigma+,  0 = pi,  -1 = sigma-
 mJ_targets = (+1, -1, 0 )
-
-# --- laser powers ---
-pd_mv_689 = 85
-pd_mv_679 = 33
-pd_mv_688 = 80
-
-P_689        = 1e-3*(0.229*pd_mv_689 - 0.586 )   # 689 nm peak power [W]
-P_679        = 1e-3*(0.146*pd_mv_679 + 0.008 )   # 679 nm peak power [W]  (placeholder)
-P_688        = 1e-3*(0.133*pd_mv_688 + 0.471 ) # 688 nm peak power [W]  (placeholder)
-
-# P_689 = 20e-3
-# P_688 = 0e-3
-# P_679 = 0.0e-3 # to bypass PD vals
-powers = [P_689, P_688, P_679]
-
-print(f"Powers \n689: {P_689*1e3:.2f} mW\n688: {P_688*1e3:.2f} mW\n679: {P_679*1e3:.2f} mW")
 
 B_field_G = 20
 B_field_T = B_field_G * 1e-4
 delta_zeeman_689 = get_zeeman_detuning(G_J_3P1, mJ_targets[0], B_field_T)
 
-# --- residual detunings (laser already tuned near Zeeman-shifted transitions) ---
-detuning_mj1 = 2*PI * 5.0e6  # detuning from 3p1, mj=1 <-> 3s1
-detuning_0   = delta_zeeman_689 + detuning_mj1       # 689 nm detuning from 1S0→3P1(mJ=0) [rad/s]
-detuning_2   = 2*PI * -400e6        # 679 nm detuning from 3S1→3P0         [rad/s]
 
+# --- laser powers ---
+# via PD
+P_689        = pd_mv_to_power("689", 85)   # 689 nm peak power [W]
+P_679        = pd_mv_to_power("679", 60)   # 679 nm peak power [W] 
+P_688        = pd_mv_to_power("688", 33)   # 688 nm peak power [W] 
+# direct measurement
+# P_689        = 0.0e-3             # 689 nm peak power [W]
+# P_679        = 0.0e-3             # 679 nm peak power [W] 
+# P_688        = 0.0e-3             # 688 nm peak power [W] 
+
+powers = [P_689, P_688, P_679]
+print(f"Powers \n689: {P_689*1e3:.2f} mW\n688: {P_688*1e3:.2f} mW\n679: {P_679*1e3:.2f} mW")
+
+
+# --- residual detunings  ---
+detuning_mj1 = 2*PI * 5.0e6                            # detuning from 3p1, mj=1 <-> 1s0
+detuning_689   = delta_zeeman_689 + detuning_mj1       # 689 nm detuning from 1S0→3P1(mJ=0) [rad/s]
+detuning_679   = 2*PI * -400e6                         # 679 nm detuning from 3S1→3P0       [rad/s]
 detunings = [detuning_mj1, 
-             detuning_2 - detuning_mj1, 
-             detuning_2]
-# detunings = 2*PI * 1e6 * np.array([0.0, -400.0, -400.0]) # to bypass detuning setpoints
-
-
-print(rf"Zeeman Shift: dwB={delta_zeeman_689 * 1e-6 / (2*PI):.2f} MHz")
+             detuning_679 - detuning_mj1, 
+             detuning_679]
 print(rf"""Input Detunings:
     delta_0={detunings[0] * 1e-6 / (2*PI):.2f} MHz
     delta_1={detunings[1] * 1e-6 / (2*PI):.2f} MHz
     delta_2={detunings[2] * 1e-6 / (2*PI):.2f} MHz""")
 
-# --- AOM shaping ---
-sigma_aom    = 90e-9        # erf rise width [s]
-t0_aom       = 0.0
 # --- atomic cloud ---
 cloud_radii  = [120e-6, 43e-6, 43e-6]   # 1-sigma position widths [m]
 temperatures = [6.5e-6, 6.5e-6, 2.5e-6]   # thermal widths [K]
 # --- beam waists ---
 w0_689       = 0.54e-3       # 689 nm 1/e^2 radius [m]
-w0_688       = 0.9e-3       # 688 nm 1/e^2 radius [m]
-w0_679       = 0.9e-3       # 679 nm 1/e^2 radius [m]
-beam_radii = [w0_689, w0_688, w0_679]
+w0_688       = 0.90e-3       # 688 nm 1/e^2 radius [m]
+w0_679       = 0.90e-3       # 679 nm 1/e^2 radius [m]
+beam_radii = np.array([w0_689, w0_688, w0_679])
+
 # --- simulation ---
-T_MAX   = 3e-6
-dt      = 20e-9
-N_atoms = 5
+T_MAX   = 5e-6
+dt      = 50e-9
+N_atoms = 100
 t_push = 0.8e-6
-n_shots = 100
+n_shots = 20
 # --- misc params ---
-
-sigma_aom = 90e-9
-ep      = {'t0': 0.0, 'sigma': sigma_aom}
+ep      = {'t0': 0.0, 'sigma': 90e-9}
 envelope='ERF'
+mode="TIME" # "TIME" for time scan(normal rabi flopping)
+            # "FREQ" for frequency scans to find stark shift
+delta_AC = 2*PI * 1e6 * 1.35
 
+
+
+### RUN CODE NOW
 # Sample ensemble; atleast_2d ensures shape (N, 3) for vectorized functions
-pos, vel = sample_atomic_ensemble(cloud_radii, temperatures, n_samples=N_atoms)
+pos, vel = sample_atomic_ensemble(cloud_radii, temperatures, n_samples=N_atoms if mode=="TIME" else 1)
 pos = np.atleast_2d(pos)
 vel = np.atleast_2d(vel)
 
-mode="TIME" # "TIME" for time scan(normal rabi flopping)
-            # "FREQ" for frequency scans to find stark shift
-delta_AC = 2*PI * 1e6 * 0.98
 if mode == "TIME":
-    det_temp = detunings
-    det_temp[2] = det_temp[2] + delta_AC
+    detunings[2] = detunings[2] + delta_AC
 
     t0 = time.perf_counter()
     tlist, pops, params = simulate_three_photon_rabi_dynamics_new(
-        pos, vel, beam_radii, powers, det_temp, k_vecs,
+        pos, vel, beam_radii, powers, detunings, k_vecs,
         pol_vecs, quant_axis, mJ_targets,
         t_max=T_MAX, dt=dt,
         n_shots=n_shots,
         envelope=envelope,
         envelope_params=ep, n_jobs=-1
     )
-    print(f"simulate_three_photon_rabi_dynamics_new: {time.perf_counter()-t0:.2f} s  "
+    print(f"Timing: {time.perf_counter()-t0:.2f} s  "
           f"({n_shots} shots, dt={dt*1e9:.0f} ns, T_MAX={T_MAX*1e6:.1f} µs)")
     print_simulation_params(params)
 
@@ -124,7 +129,7 @@ if mode == "TIME":
         ax.plot(tlist * 1e6, pops[k], color=colors[k], label=state_labels[k])
     ax.set_xlabel('Time [µs]')
     ax.set_ylabel('State population')
-    ax.set_title(f'Three-photon ladder — Rabi flopping\n'
+    ax.set_title(f'Three-photon Simultaneous Excitation — Rabi flopping\n'
                  rf'$\Delta_0$={detunings[0]/(2*PI)*1e-6:.1f} MHz, '
                  rf'$\Delta_1$={detunings[1]/(2*PI)*1e-6:.1f} MHz, '
                  rf'$\Delta_2$={detunings[2]/(2*PI)*1e-6:.1f} MHz')
@@ -139,9 +144,9 @@ elif mode == "FREQ":
     vel = np.atleast_2d(vel)
     # Scan detunings[2] (679 nm) around the bare three-photon resonance to locate
     # the AC Stark-shifted resonance. All other detunings are held fixed.
-    t_probe    = T_MAX           # fixed pulse time [s]; tune to ~quarter pi-time for contrast
-    dfi = 2*PI * 0.955e6     # scan ±50 MHz around the bare resonance
-    dff = 2*PI * 1e6
+    t_probe    = T_MAX   # fixed pulse time [s]; tune to ~quarter pi-time for contrast
+    dfi = 2*PI * 1e6     # scan ±50 MHz around the bare resonance
+    dff = 2*PI * 2e6
     n_points   = 21
 
     bare_resonance = detunings[2]   # = detunings[2] as currently set
@@ -151,7 +156,7 @@ elif mode == "FREQ":
     pop_3P0 = np.zeros(n_points)
     for idx, d2 in enumerate(tqdm(scan_d2, desc='freq scan (679 detuning)')):
         dets_scan = [detunings[0], detunings[1], d2]
-        _, pops_s = simulate_three_photon_rabi_dynamics(
+        _, pops_s, _ = simulate_three_photon_rabi_dynamics_new(
             pos, vel, beam_radii, powers, dets_scan, k_vecs,
             pol_vecs, quant_axis, mJ_targets,
             t_max=t_probe, dt=dt,
@@ -169,7 +174,6 @@ elif mode == "FREQ":
 
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.plot(x_MHz, pop_3P0, 'C3.-')
-    # ax.axvline(0,         color='k',  ls='--', lw=0.8, label='bare resonance')
     ax.axvline(stark_MHz, color='C3', ls=':',  lw=1.0,
                label=f'peak @ {stark_MHz:.2f} MHz')
     ax.set_xlabel(r'$\Delta_2$ offset from bare resonance [MHz]')

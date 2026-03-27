@@ -65,7 +65,7 @@ def sample_atomic_ensemble(radii, temperatures, mass=88*AMU, n_samples=1):
     velocities = np.random.normal(loc=0.0, scale=sigma_v, size=(n_samples, 3))
 
     if n_samples == 1:
-        return positions[0], velocities[0]
+        return np.atleast_2d(positions[0]), np.atleast_2d(velocities[0])
     return np.atleast_2d(positions), np.atleast_2d(velocities)
 
 
@@ -968,11 +968,11 @@ _L_PROJ5_NP  = np.array([_coh_L_new(_PROJ5_NP[i])
                           for i in range(_d5)])                 # (5, 25, 25)
 
 # Initial density-matrix vector
-_RHO0_VEC_NP = np.zeros(_d25, dtype=complex); 
+_RHO0_VEC_NP = np.zeros(_d25, dtype=complex)
 
-_RHO0_VEC_NP[0]  = 1.0  # |1S0⟩
-_RHO0_VEC_NP[6]  = 1.0  # |3P1⟩
-_RHO0_VEC_NP[18] = 1.0  # |3P0⟩
+# _RHO0_VEC_NP[0] = 1.0  # initial pop in 1s0
+# _RHO0_VEC_NP[6] = 1.0  # initial pop in 3p1
+_RHO0_VEC_NP[18] = 1.0  # initial pop in 3p0
 
 
 def _extract_pops_new(rho_flat_batch, N_atoms):
@@ -1166,7 +1166,7 @@ def simulate_three_photon_rabi_dynamics_new(
         for row, k in enumerate([0, 1, 3, 4]):
             idxs = np.arange(N_atoms) * d2 + k * d + k
             avg_pops[row] = np.real(sol.y[idxs, :]).mean(axis=0)
-
+        
         param_dict = {
             'beam_0': {
                 'laser_detuning':    detunings[0],
@@ -1258,7 +1258,7 @@ def simulate_three_photon_rabi_dynamics_new(
 
     # parallelise shots with joblib
     pop_list = _Parallel_new(n_jobs=n_jobs)(
-        _delayed_new(_run_one_shot_new)(
+        _delayed_new(_run_one_shot_new)(    
             t_pulse, L_stat, L_td, rho0_b, N_s, envelope, t0_ep, ep)
         for t_pulse, (L_stat, L_td, rho0_b, N_s)
         in zip(tlist, shot_matrices)
