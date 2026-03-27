@@ -7,6 +7,8 @@ import qutip as qt
 import scipy.constants as const
 from tqdm import tqdm
 from scipy.special import erf, erfinv
+from scipy.integrate import solve_ivp as _solve_ivp_new
+from joblib import Parallel as _Parallel_new, delayed as _delayed_new
 
 
 ##### CONSTANTS ###############
@@ -467,7 +469,8 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
                                          n_shots=None,
                                          envelope='SQUARE',
                                          envelope_params=None,
-                                         ensemble_params=None):
+                                         ensemble_params=None,
+                                         n_jobs=None):
     """
     Simulate three-photon Rabi dynamics for the 1S0–3P1–3S1–3P0 ladder in Sr-88.
 
@@ -882,8 +885,6 @@ def test_envelopes(t, widths, envelope):
 # All new names carry the _new suffix.  No existing code is modified.
 # ============================================================
 
-from scipy.integrate import solve_ivp as _solve_ivp_new
-from joblib import Parallel as _Parallel_new, delayed as _delayed_new
 
 # ── Pre-built 5-level numpy matrices (computed once at import) ─────────── #
 _d5  = 5
@@ -916,7 +917,7 @@ _COPS5_NP  = [
 
 def build_liouvillian_numpy(H_np, c_ops_list):
     """
-    Build the d²×d² Liouvillian superoperator (Strategy A).
+    Build the d²×d² Liouvillian superoperator.
 
     Uses row-major vectorization: d/dt vec(ρ) = L @ vec(ρ),
     where vec(ρ) = ρ.flatten() (C order).
@@ -987,7 +988,7 @@ def _extract_pops_new(rho_flat_batch, N_atoms):
 
 def _build_L_batches_new(d0_arr, d01_arr, d012_arr, O0_arr, O1_arr, O2_arr):
     """
-    Vectorised construction of per-atom Liouvillians (Strategy B).
+    Vectorised construction of per-atom Liouvillians.
 
     Exploits linearity of L in H:
         L_i = L_diss
@@ -1203,7 +1204,7 @@ def simulate_three_photon_rabi_dynamics_new(
         rho0_b = np.tile(_RHO0_VEC_NP, N_s)
         shot_matrices.append((L_stat, L_td, rho0_b, N_s))
 
-    # Strategy C: parallelise shots with joblib
+    # parallelise shots with joblib
     pop_list = _Parallel_new(n_jobs=n_jobs)(
         _delayed_new(_run_one_shot_new)(
             t_pulse, L_stat, L_td, rho0_b, N_s, envelope, t0_ep, ep)
@@ -1213,18 +1214,5 @@ def simulate_three_photon_rabi_dynamics_new(
 
     avg_populations = np.array(pop_list).T   # (4, n_steps)
     return tlist, avg_populations
-
-
-if __name__ == '__main__':
-    pass
-    # t = np.linspace(-0.5e-6, 2.5e-6, 1000)
-    # widths = np.linspace(0, 2e-6, 15)
-
-    # test_envelopes(t, widths, "SQUARE")
-    # test_envelopes(t, widths, "ERF")
-    # test_envelopes(t, widths, "GAUSSIAN")
-    # test_envelopes(t, widths, "BLACKMAN")
-
-    
 
 

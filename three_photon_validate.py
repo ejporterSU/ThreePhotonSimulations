@@ -1,6 +1,7 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 from simulation_functions import *
 
 # ── Fixed geometry ───────────────────────────────────────────────────────── #
@@ -77,7 +78,7 @@ beam_radii = [w0_689, w0_688, w0_679]
 # --- simulation ---
 T_MAX   = 10e-6
 dt      = 50e-9
-N_atoms = 50
+N_atoms = 500
 t_push = 0.8e-6
 n_shots = 50
 # --- misc params ---
@@ -87,7 +88,7 @@ ep      = {'t0': 0.0, 'sigma': sigma_aom}
 envelope='ERF'
 
 # Sample ensemble; atleast_2d ensures shape (N, 3) for vectorized functions
-pos, vel = sample_atomic_ensemble(cloud_radii, temperatures, n_samples=1)
+pos, vel = sample_atomic_ensemble(cloud_radii, temperatures, n_samples=N_atoms)
 pos = np.atleast_2d(pos)
 vel = np.atleast_2d(vel)
 
@@ -98,15 +99,17 @@ if mode == "TIME":
     det_temp = detunings
     det_temp[2] = det_temp[2] + delta_AC
 
-    tlist, pops = simulate_three_photon_rabi_dynamics(
-        
+    t0 = time.perf_counter()
+    tlist, pops = simulate_three_photon_rabi_dynamics_new(
         pos, vel, beam_radii, powers, det_temp, k_vecs,
         pol_vecs, quant_axis, mJ_targets,
         t_max=T_MAX, dt=dt,
         n_shots=n_shots,
         envelope=envelope,
-        envelope_params=ep,
+        envelope_params=ep, n_jobs=-1
     )
+    print(f"simulate_three_photon_rabi_dynamics_new: {time.perf_counter()-t0:.2f} s  "
+          f"({n_shots} shots, dt={dt*1e9:.0f} ns, T_MAX={T_MAX*1e6:.1f} µs)")
 
     fig, ax = plt.subplots(figsize=(8, 4))
     state_labels = ['1S0', '3P1', '3P0', '3P2']
