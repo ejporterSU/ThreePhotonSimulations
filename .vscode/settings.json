@@ -1,5 +1,6 @@
 {
     "python.defaultInterpreterPath": "C:\\Users\\Erik\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
     "jupyter.kernelSpecFindPreference": [],
-    "jupyter.notebookFileRoot": "${workspaceFolder}"
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "notebook.output.scrolling": true
 }
