@@ -65,8 +65,8 @@ def sample_atomic_ensemble(radii, temperatures, mass=88*AMU, n_samples=1):
     velocities = np.random.normal(loc=0.0, scale=sigma_v, size=(n_samples, 3))
 
     if n_samples == 1:
-        return positions[0], velocities[0]
-    return positions, velocities
+        return np.atleast_2d(positions[0]), np.atleast_2d(velocities[0])
+    return np.atleast_2d(positions), np.atleast_2d(velocities)
 
 
 def get_k_hat(theta, theta_z):
@@ -258,9 +258,9 @@ def get_calculated_parameters(position, velocity, k_vecs, powers, beam_radii,
     rabi_2 = C2 * gamma_679 * np.sqrt(I2 / (2 * Is_679))
 
     return {
-        "beam_0": {"dshift": doppler_0, "Omega": rabi_0},
-        "beam_1": {"dshift": doppler_1, "Omega": rabi_1},
-        "beam_2": {"dshift": doppler_2, "Omega": rabi_2},
+        "beam_0": {"dshift": doppler_0, "Omega": rabi_0, "intensity": I0},
+        "beam_1": {"dshift": doppler_1, "Omega": rabi_1, "intensity": I1},
+        "beam_2": {"dshift": doppler_2, "Omega": rabi_2, "intensity": I2},
     }
 
 
@@ -291,7 +291,7 @@ def apply_readout(population, t_push):
 def simulate_one_photon_rabi_dynamics(positions, velocities, beam_radii,
                                       powers, detunings, k_vecs,
                                       pol_vecs, quant_axis, mJ_targets,
-                                      t_max=20e-6, dt=10e-9,
+                                      t_max=5e-6, dt=10e-9,
                                       envelope='SQUARE',
                                       envelope_params=None,
                                       ensemble_params=None):
@@ -893,7 +893,9 @@ _I5  = np.eye(_d5, dtype=complex)
 
 
 def _ket5_new(i):
-    v = np.zeros(_d5, dtype=complex); v[i] = 1.0; return v
+    v = np.zeros(_d5, dtype=complex)
+    v[i] = 1.0
+    return v
 
 
 # Projectors |i><i| and coupling operators |i><j|+h.c. (all 5×5 complex)
@@ -965,9 +967,12 @@ _L_H23_NP    = _coh_L_new(_H23_NP)
 _L_PROJ5_NP  = np.array([_coh_L_new(_PROJ5_NP[i])
                           for i in range(_d5)])                 # (5, 25, 25)
 
-# Initial density-matrix vector: ρ = |0><0|, flattened row-major → index 0
+# Initial density-matrix vector
 _RHO0_VEC_NP = np.zeros(_d25, dtype=complex)
-_RHO0_VEC_NP[0] = 1.0
+
+# _RHO0_VEC_NP[0] = 1.0  # initial pop in 1s0
+# _RHO0_VEC_NP[6] = 1.0  # initial pop in 3p1
+_RHO0_VEC_NP[18] = 1.0  # initial pop in 3p0
 
 
 def _extract_pops_new(rho_flat_batch, N_atoms):
@@ -1161,7 +1166,43 @@ def simulate_three_photon_rabi_dynamics_new(
         for row, k in enumerate([0, 1, 3, 4]):
             idxs = np.arange(N_atoms) * d2 + k * d + k
             avg_pops[row] = np.real(sol.y[idxs, :]).mean(axis=0)
-        return tlist, avg_pops
+        
+        param_dict = {
+            'beam_0': {
+                'laser_detuning':    detunings[0],
+                'mean_doppler':      float(np.mean(par['beam_0']['dshift'])),
+                'std_doppler':       float(np.std(par['beam_0']['dshift'])),
+                'mean_eff_detuning': float(np.mean(d0_arr)),
+                'std_eff_detuning':  float(np.std(d0_arr)),
+                'mean_Omega':        float(np.mean(O0_arr)),
+                'std_Omega':         float(np.std(O0_arr)),
+                'mean_intensity':    float(np.mean(par['beam_0']['intensity'])),
+                'std_intensity':     float(np.std(par['beam_0']['intensity'])),
+            },
+            'beam_1': {
+                'laser_detuning':    detunings[1],
+                'mean_doppler':      float(np.mean(par['beam_1']['dshift'])),
+                'std_doppler':       float(np.std(par['beam_1']['dshift'])),
+                'mean_eff_detuning': float(np.mean(d01_arr)),
+                'std_eff_detuning':  float(np.std(d01_arr)),
+                'mean_Omega':        float(np.mean(O1_arr)),
+                'std_Omega':         float(np.std(O1_arr)),
+                'mean_intensity':    float(np.mean(par['beam_1']['intensity'])),
+                'std_intensity':     float(np.std(par['beam_1']['intensity'])),
+            },
+            'beam_2': {
+                'laser_detuning':    detunings[2],
+                'mean_doppler':      float(np.mean(par['beam_2']['dshift'])),
+                'std_doppler':       float(np.std(par['beam_2']['dshift'])),
+                'mean_eff_detuning': float(np.mean(d012_arr)),
+                'std_eff_detuning':  float(np.std(d012_arr)),
+                'mean_Omega':        float(np.mean(O2_arr)),
+                'std_Omega':         float(np.std(O2_arr)),
+                'mean_intensity':    float(np.mean(par['beam_2']['intensity'])),
+                'std_intensity':     float(np.std(par['beam_2']['intensity'])),
+            },
+        }
+        return tlist, avg_pops, param_dict
 
     # ── SHAPED (ERF / GAUSSIAN / BLACKMAN) mode ───────────────────────── #
     if envelope not in ('ERF', 'GAUSSIAN', 'BLACKMAN'):
@@ -1173,6 +1214,12 @@ def simulate_three_photon_rabi_dynamics_new(
 
     # Build per-shot atomic ensembles and their Liouvillian batches
     shot_matrices = []
+    # accumulate per-atom values across shots for diagnostics
+    all_dop0, all_dop1, all_dop2 = [], [], []
+    all_d0,   all_d01,  all_d012 = [], [], []
+    all_O0,   all_O1,   all_O2   = [], [], []
+    all_I0,   all_I1,   all_I2   = [], [], []
+
     for idx in range(n_steps):
         if ensemble_params is not None:
             pos_i, vel_i = sample_atomic_ensemble(
@@ -1199,6 +1246,11 @@ def simulate_three_photon_rabi_dynamics_new(
         O1_s   = par_i['beam_1']['Omega']
         O2_s   = par_i['beam_2']['Omega']
 
+        all_dop0.append(par_i['beam_0']['dshift']); all_dop1.append(par_i['beam_1']['dshift']); all_dop2.append(par_i['beam_2']['dshift'])
+        all_d0.append(d0_s);   all_d01.append(d01_s);   all_d012.append(d012_s)
+        all_O0.append(O0_s);   all_O1.append(O1_s);     all_O2.append(O2_s)
+        all_I0.append(par_i['beam_0']['intensity']); all_I1.append(par_i['beam_1']['intensity']); all_I2.append(par_i['beam_2']['intensity'])
+
         L_stat, L_td = _build_L_batches_new(
             d0_s, d01_s, d012_s, O0_s, O1_s, O2_s)
         rho0_b = np.tile(_RHO0_VEC_NP, N_s)
@@ -1206,13 +1258,95 @@ def simulate_three_photon_rabi_dynamics_new(
 
     # parallelise shots with joblib
     pop_list = _Parallel_new(n_jobs=n_jobs)(
-        _delayed_new(_run_one_shot_new)(
+        _delayed_new(_run_one_shot_new)(    
             t_pulse, L_stat, L_td, rho0_b, N_s, envelope, t0_ep, ep)
         for t_pulse, (L_stat, L_td, rho0_b, N_s)
         in zip(tlist, shot_matrices)
     )
 
     avg_populations = np.array(pop_list).T   # (4, n_steps)
-    return tlist, avg_populations
+
+    # flatten all per-atom values across shots for aggregate stats
+    cat0   = np.concatenate(all_dop0); cat1   = np.concatenate(all_dop1); cat2   = np.concatenate(all_dop2)
+    catd0  = np.concatenate(all_d0);   catd01 = np.concatenate(all_d01);  catd012 = np.concatenate(all_d012)
+    catO0  = np.concatenate(all_O0);   catO1  = np.concatenate(all_O1);   catO2  = np.concatenate(all_O2)
+    catI0  = np.concatenate(all_I0);   catI1  = np.concatenate(all_I1);   catI2  = np.concatenate(all_I2)
+
+    param_dict = {
+        'beam_0': {
+            'laser_detuning':    detunings[0],
+            'mean_doppler':      float(np.mean(cat0)),
+            'std_doppler':       float(np.std(cat0)),
+            'mean_eff_detuning': float(np.mean(catd0)),
+            'std_eff_detuning':  float(np.std(catd0)),
+            'mean_Omega':        float(np.mean(catO0)),
+            'std_Omega':         float(np.std(catO0)),
+            'mean_intensity':    float(np.mean(catI0)),
+            'std_intensity':     float(np.std(catI0)),
+        },
+        'beam_1': {
+            'laser_detuning':    detunings[1],
+            'mean_doppler':      float(np.mean(cat1)),
+            'std_doppler':       float(np.std(cat1)),
+            'mean_eff_detuning': float(np.mean(catd01)),
+            'std_eff_detuning':  float(np.std(catd01)),
+            'mean_Omega':        float(np.mean(catO1)),
+            'std_Omega':         float(np.std(catO1)),
+            'mean_intensity':    float(np.mean(catI1)),
+            'std_intensity':     float(np.std(catI1)),
+        },
+        'beam_2': {
+            'laser_detuning':    detunings[2],
+            'mean_doppler':      float(np.mean(cat2)),
+            'std_doppler':       float(np.std(cat2)),
+            'mean_eff_detuning': float(np.mean(catd012)),
+            'std_eff_detuning':  float(np.std(catd012)),
+            'mean_Omega':        float(np.mean(catO2)),
+            'std_Omega':         float(np.std(catO2)),
+            'mean_intensity':    float(np.mean(catI2)),
+            'std_intensity':     float(np.std(catI2)),
+        },
+    }
+    return tlist, avg_populations, param_dict
+
+
+def print_simulation_params(param_dict):
+    """
+    Print a formatted diagnostic summary of a param_dict returned by
+    simulate_three_photon_rabi_dynamics_new.
+
+    Args:
+        param_dict (dict): As returned by simulate_three_photon_rabi_dynamics_new.
+    """
+    beam_labels  = ['beam_0 (689 nm)', 'beam_1 (688 nm)', 'beam_2 (679 nm)']
+    beam_keys    = ['beam_0', 'beam_1', 'beam_2']
+    detun_labels = ['Δ₀ (single-photon)', 'Δ₀₁ (two-photon)', 'Δ₀₁₂ (three-photon)']
+
+    print("=" * 60)
+    print("  Three-Photon Simulation — Parameter Summary")
+    print("=" * 60)
+
+    for label, key in zip(beam_labels, beam_keys):
+        b = param_dict[key]
+        print(f"\n  {label}")
+        print(f"  {'─' * (len(label) + 2)}")
+        print(f"    Laser detuning   : {b['laser_detuning'] / (2*PI) * 1e-6:+.3f} MHz")
+        print(f"    Doppler shift    : {b['mean_doppler']   / (2*PI) * 1e-6:+.3f} ± "
+              f"{b['std_doppler']   / (2*PI) * 1e-6:.3f} MHz")
+        print(f"    Eff. detuning    : {b['mean_eff_detuning'] / (2*PI) * 1e-6:+.3f} ± "
+              f"{b['std_eff_detuning'] / (2*PI) * 1e-6:.3f} MHz")
+        print(f"    Rabi frequency Ω : {b['mean_Omega'] / (2*PI) * 1e-3:,.1f} ± "
+              f"{b['std_Omega'] / (2*PI) * 1e-3:.1f} kHz")
+        print(f"    Local intensity  : {b['mean_intensity']:,.2f} ± "
+              f"{b['std_intensity']:.2f} µW/cm²")
+
+    print("\n  Cumulative detunings (mean ± std across ensemble)")
+    print(f"  {'─' * 50}")
+    for dlabel, bkey in zip(detun_labels, beam_keys):
+        b = param_dict[bkey]
+        print(f"    {dlabel:<28}: {b['mean_eff_detuning'] / (2*PI) * 1e-6:+.3f} ± "
+              f"{b['std_eff_detuning'] / (2*PI) * 1e-6:.3f} MHz")
+
+    print("=" * 60)
 
 
