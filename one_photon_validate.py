@@ -1,12 +1,16 @@
+#%%
+
 import numpy as np
 import matplotlib.pyplot as plt
 import qutip as qt
 import scipy.constants as const
 from tqdm import tqdm
 import h5py
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
-#%%
 from simulation_functions import *
+
 
 def read_RID(rid, exp_name="ClockExcitation"):    
     with h5py.File(f'Data/0000{rid}-{exp_name}_exp.h5', 'r') as f:
@@ -105,8 +109,18 @@ if __name__ == "__main__":
         output_pops = apply_readout(output_pops,     t_push) # push pulse model
 
         ax.plot(output_times * 1e6, output_pops, color=f'C{i+1}') 
-        ax.scatter(t_raws[i] * 1e6, pop_raws[i], color=f'C{i+1}', s=25,
+
+
+        if  i == 3:
+            x, y = t_raws[i] * 1e6, pop_raws[i]
+            x = x[np.where(y<0.2)]
+            y = y[np.where(y<0.2)]
+
+            ax.scatter( x, y, color=f'C{i+1}', s=25,
                 label=f'RID: {rids[i]}')
+        else:
+            ax.scatter(t_raws[i] * 1e6, pop_raws[i], color=f'C{i+1}', s=25,
+                    label=f'RID: {rids[i]}')
         
 
     ax.set_xlabel('Pulse duration [us]')
