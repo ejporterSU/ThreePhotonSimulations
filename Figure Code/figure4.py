@@ -1,10 +1,14 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.transforms import ScaledTranslation
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.optimize import curve_fit
+
+# --- Layout toggle ---
+VERTICAL = True   # True  → phase scans stacked above contrast plot
+                   # False → phase scans left, contrast right (default)
 
 # --- Style constants ---
 FS_LABEL  = 10      # axis labels (left panels)
@@ -50,17 +54,26 @@ c3s = "#FF9090"
 
 # --- Layout ---
 plt.rcParams.update({'font.size': FS_TICK, 'font.family': 'sans-serif'})
-fig = plt.figure(figsize=(11, 4.5))
-gs = GridSpec(3, 2, width_ratios=[2.5, 1.8], wspace=0.18, hspace=0.03,
-              left=0.07, right=0.96, top=0.93, bottom=0.13)
 
-#phase scans
-ax_p1 = fig.add_subplot(gs[0, 0])
-ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
-ax_p3 = fig.add_subplot(gs[2, 0], sharex=ax_p1)
-
-# contrast
-ax    = fig.add_subplot(gs[:, 1])
+if VERTICAL:
+    fig = plt.figure(figsize=(6.5, 9))
+    # Outer: phase-scan block (top) + contrast plot (bottom), with room for xlabel between them
+    gs_outer = GridSpec(2, 1, height_ratios=[3, 2.2], hspace=0.35,
+                        left=0.13, right=0.87, top=0.95, bottom=0.08)
+    # Inner: three tightly stacked phase panels
+    gs_inner = GridSpecFromSubplotSpec(3, 1, subplot_spec=gs_outer[0], hspace=0.0)
+    ax_p1 = fig.add_subplot(gs_inner[0])
+    ax_p2 = fig.add_subplot(gs_inner[1], sharex=ax_p1)
+    ax_p3 = fig.add_subplot(gs_inner[2], sharex=ax_p1)
+    ax    = fig.add_subplot(gs_outer[1])
+else:
+    fig = plt.figure(figsize=(11, 4.5))
+    gs = GridSpec(3, 2, width_ratios=[2.5, 1.8], wspace=0.18, hspace=0.03,
+                  left=0.07, right=0.96, top=0.93, bottom=0.13)
+    ax_p1 = fig.add_subplot(gs[0, 0])
+    ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
+    ax_p3 = fig.add_subplot(gs[2, 0], sharex=ax_p1)
+    ax    = fig.add_subplot(gs[:, 1])
 
 # Histogram axes glued flush to the right of each phase panel
 dividers  = [make_axes_locatable(a) for a in [ax_p1, ax_p2, ax_p3]]
@@ -154,6 +167,14 @@ for i, (axi, t_scan, lbl, col, mkr) in enumerate(
         axi.set_xticklabels(['0', r'$\pi$', r'$2\pi$', r'$3\pi$', r'$4\pi$'], fontsize=FS_TICK)
         axi.set_xlabel('Phase (rad)', fontsize=FS_LABEL)
 
+# Panel labels
+_lx = -0.14 if VERTICAL else -0.18
+ax_p1.text(_lx, 1.05, 'a)', transform=ax_p1.transAxes,
+           fontsize=12, fontweight='bold', va='top', ha='left')
+_lx2 = -0.14 if VERTICAL else -0.14
+ax.text(_lx2, 1.02, 'b)', transform=ax.transAxes,
+        fontsize=12, fontweight='bold', va='top', ha='left')
+
 # --- Right panel: Contrast decay ---
 ax.plot(t_1 * 1e6, c_1, color=c1, linewidth=LW_MAIN, zorder=3)
 ax.plot(t_3 * 1e6, c_3, color=c3, linewidth=LW_MAIN, zorder=3)
@@ -201,5 +222,5 @@ ax2.set_yticklabels(['0.1', '1', '10', '100', r'$10^3$'], fontsize=FS_RTICK, col
 plt.show()
 
 
-fig.savefig("Figures/fig4.pdf", dpi=300, bbox_inches="tight", facecolor="white")  # save for figure resolution
-fig.savefig("Figures/fig4.png", dpi=150, bbox_inches="tight")  # save for previewing
+fig.savefig("Figures/fig4v.pdf", dpi=300, bbox_inches="tight", facecolor="white")  # save for figure resolution
+fig.savefig("Figures/fig4v.png", dpi=150, bbox_inches="tight")  # save for previewing
