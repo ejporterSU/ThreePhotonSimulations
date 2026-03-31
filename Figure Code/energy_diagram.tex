@@ -1,90 +1,124 @@
-\documentclass[tikz, border=10pt]{standalone}
+\documentclass[tikz, border=2pt]{standalone}
 \usepackage{tikz}
 \usepackage{amsmath}
-\usetikzlibrary{arrows.meta, decorations.pathmorphing}
 \usepackage{xcolor}
+\usetikzlibrary{arrows.meta, decorations.pathmorphing}
+
 \begin{document}
 \begin{tikzpicture}
 
-% -------------------------------------------------------
+% =======================================================
+% Color definitions
+% =======================================================
+\definecolor{c689}{HTML}{FF0000}   % Omega_1 transition (689 nm)
+\definecolor{c688}{HTML}{E33434}   % Omega_2 transition (688 nm)
+\definecolor{c679}{HTML}{780202}   % Omega_3 transition (679 nm)
+
+% =======================================================
 % Layout parameters
-% -------------------------------------------------------
-\def\lw{0.65}     % half-length of sublevel lines
-\def\dz{0.3}     % Zeeman sublevel spacing (schematic)
+% =======================================================
+
+% Level line half-widths
+\def\lw{0.65}
+
+% Zeeman sublevel vertical splitting
+\def\dz{0.3}
+
+% Horizontal offset between m_j sublevels
 \def\offset{2.5}
+
+% Detuning offset (dashed virtual levels)
 \def\detune{0.3}
+
+% Label x-offset (state term symbols on the left)
 \def\lboff{-3.7}
+
+% m_j header vertical offset above top level
 \def\mjoff{0.5}
 
-% X centers for each level/manifold
+% --- X centers (all manifolds share x = 0) ---
 \def\xGnd{0}
-\def\xPo{0}
-\def\xPz{0}
-\def\xSo{0}
+\def\xPo{0}    % 3P0
+\def\xPz{0}    % 3P1
+\def\xSo{0}    % 3S1
 
-% Y positions
-\def\yGnd{-0.5}
-\def\yPz{2.5}     % 3P0 (~14504 cm^{-1})
-\def\yPo{1.5}     % 3P1 center (~14836 cm^{-1})
-\def\ySo{5}     % 3S1 center (~29038 cm^{-1})
+% --- Y positions (increasing energy upward) ---
+\def\yGnd{-0.5}  % 1S0  ground state
+\def\yPo{1.5}    % 3P0  (~14504 cm^{-1})
+\def\yPz{2.5}    % 3P1  (~14836 cm^{-1})
+\def\ySo{5.0}    % 3S1  (~29038 cm^{-1})
 
-% colors
-\definecolor{c689}{HTML}{ff0000}
-\definecolor{c688}{HTML}{E33434}
-\definecolor{c679}{HTML}{780202}
+% --- Common styles ---
+\tikzset{
+  arrow/.style = {ultra thick, ->, >=stealth},
+}
 
-\tikzstyle{arrow} = [ultra thick,->,>=stealth];
+% =======================================================
+% Energy levels
+% =======================================================
 
-
-
-%%%%%% DRAW LEVELS
-% 1S0
+% --- 1S0 (ground state, no sublevels) ---
 \draw[thick] (\xGnd-\lw, \yGnd) -- (\xGnd+\lw, \yGnd);
-\node[left, font=\small] at (\xGnd + \lboff, \yGnd) {${}^1\!S_0$};
+\node[left, font=\small] at (\xGnd+\lboff, \yGnd) {${}^1\!S_0$};
 
+% --- 3P0 (clock state, no sublevels) ---
+\draw[thick]  (\xPo-\lw, \yPo)          -- (\xPo+\lw, \yPo);
+\draw[thick, dashed] (\xPo-\lw, \yPo-\detune) -- (\xPo+\lw, \yPo-\detune);
+\draw[<->, >=stealth, font=\scriptsize]
+  (\xPo+\lw, \yPo-\detune) -- (\xPo+\lw, \yPo)
+  node[midway, right] {$\Delta_3$};
+\node[left, font=\small] at (\xPo+\lboff, \yPo) {${}^3\!P_0$};
 
-%3P0
-\draw[thick] (\xPo-\lw, \yPo) -- (\xPo+\lw, \yPo);
-\draw[thick, dashed] (\xPo-\lw, \yPo-\detune) -- (\xPo+\lw, \yPo-\detune); % detuning
-\draw[<->, >=stealth, font=\scriptsize] (\xPo +\lw, \yPo - \detune) -- (\xPo +\lw , \yPo ) node[midway, right] {$\Delta_3$};
+% --- 3P1 (three Zeeman sublevels: m_j = +1, 0, -1) ---
+\draw[thick] (\xPz-\lw-\offset, \yPz+\dz) -- (\xPz+\lw-\offset, \yPz+\dz);  % m_j = +1
+\draw[thick] (\xPz-\lw,         \yPz)      -- (\xPz+\lw,         \yPz);       % m_j =  0
+\draw[thick] (\xPz-\lw+\offset, \yPz-\dz)  -- (\xPz+\lw+\offset, \yPz-\dz);  % m_j = -1
+% detuning marker on m_j = +1
+\draw[thick, dashed]
+  (\xPz-\lw-\offset, \yPz+\dz+\detune) -- (\xPz+\lw-\offset, \yPz+\dz+\detune);
+\draw[<->, >=stealth, font=\scriptsize]
+  (\xPz+\lw-\offset, \yPz+\dz) -- (\xPz+\lw-\offset, \yPz+\dz+\detune)
+  node[midway, right] {$\Delta_1$};
+\node[left, font=\small] at (\xPz+\lboff, \yPz) {${}^3\!P_1$};
 
-\node[left, font=\small] at (\xPo + \lboff, \yPo) {${}^3\!P_0$};
+% --- 3S1 (three Zeeman sublevels: m_j = +1, 0, -1) ---
+\draw[thick] (\xSo-\lw+\offset, \ySo-\dz/2) -- (\xSo+\lw+\offset, \ySo-\dz/2);  % m_j = +1
+\draw[thick] (\xSo-\lw,         \ySo)        -- (\xSo+\lw,         \ySo);          % m_j =  0
+\draw[thick] (\xSo-\lw-\offset, \ySo+\dz/2)  -- (\xSo+\lw-\offset, \ySo+\dz/2);   % m_j = -1
+% detuning marker on m_j = 0
+\draw[thick, dashed]
+  (\xSo-\lw, \ySo-\detune) -- (\xSo+\lw, \ySo-\detune);
+\draw[<->, >=stealth, font=\scriptsize]
+  (\xSo-\lw, \ySo) -- (\xSo-\lw, \ySo-\dz)
+  node[midway, left] {$\Delta_2$};
+\node[left, font=\small] at (\xSo+\lboff, \ySo) {${}^3\!S_1$};
 
+% =======================================================
+% Transition arrows (three-photon pathway)
+% =======================================================
 
-%3P1 + SUBLEVELS
-\draw[thick] (\xPz-\lw - \offset, \yPz+\dz) -- (\xPz+\lw - \offset, \yPz+\dz); %MJ=+1
-\draw[thick] (\xPz-\lw, \yPz)     -- (\xPz+\lw, \yPz);%MJ=0
-\draw[thick] (\xPz-\lw + \offset, \yPz-\dz) -- (\xPz+\lw+\offset, \yPz-\dz);%MJ=-1
-\draw[thick, dashed] (\xPz-\lw - \offset, \yPz+\dz+\detune) -- (\xPz+\lw - \offset, \yPz+\dz+\detune); % detuning
-\draw[ <->, >=stealth, font=\scriptsize] (\xPz - \offset + \lw, \yPz+\dz ) -- (\xPz+\lw - \offset, \yPz+\dz + \detune) node[midway, right] {$\Delta_1$};
-\node[left, font=\small] at (\xPz + \lboff, \yPz) {${}^3\!P_1$};
+% Omega_1: 1S0 -> 3P1 (m_j = +1, detuned)
+\draw[arrow, c689, font=\scriptsize]
+  (\xGnd, \yGnd) -- (\xPz-\offset, \yPz+\dz+\detune)
+  node[midway, left] {$\Omega_1,\; \vec{k}_1$};
 
-%3S1 + SUBLEVELS
-\draw[thick] (\xSo-\lw + \offset, \ySo-\dz/2) -- (\xSo+\lw + \offset, \ySo-\dz/2);%MJ=+1
-\draw[thick] (\xSo-\lw, \ySo)     -- (\xSo+\lw, \ySo);%MJ=0
-\draw[thick] (\xSo-\lw - \offset, \ySo+\dz/2) -- (\xSo+\lw - \offset, \ySo+\dz/2);%MJ=-1
-\draw[thick, dashed] (\xSo-\lw , \ySo-\detune) -- (\xSo+\lw, \ySo-\detune); % detuning
-\draw[ <->, >=stealth, font=\scriptsize] (\xSo  - \lw, \ySo) -- (\xSo - \lw, \ySo - \dz) node[midway, left] {$\Delta_2$};
+% Omega_2: 3P1 (m_j = +1) -> 3S1 (m_j = 0, detuned)
+\draw[arrow, c688, font=\scriptsize]
+  (\xPz-\offset, \yPz+\dz+\detune) -- (\xSo, \ySo-\detune)
+  node[midway, above left] {$\Omega_2,\; \vec{k}_2$};
 
-\node[left, font=\small] at (\xSo + \lboff, \ySo) {${}^3\!S_1$};
+% Omega_3: 3S1 (m_j = 0) -> 3P0 (detuned)
+\draw[arrow, c679, font=\scriptsize]
+  (\xSo, \ySo-\detune) -- (\xPo, \yPo-\detune)
+  node[midway, right] {$\Omega_3,\; \vec{k}_3$};
 
-
-%%%%%% DRAW TRANSITIONS
-\draw[arrow, c689, font=\scriptsize] (\xGnd, \yGnd) -> (\xPz - \offset, \yPz + \dz + \detune) node[midway, left] {$\Omega_{1}, \vec{k}_{1}$};
-\draw[arrow, c688, font=\scriptsize] (\xPz - \offset, \yPz + \dz + \detune) -> (\xSo , \ySo-\detune) node[midway, above left] {$\Omega_{2}, \vec{k}_{2}$};
-\draw[arrow, c679, font=\scriptsize]  (\xSo , \ySo-\detune) -> (\xPo , \yPo - \detune) node[midway, right] {$\Omega_{3}, \vec{k}_{3}$};
-
-%%% ZEEMAN LABELS
-\node[left, font=\small] at (\xGnd - \offset, \ySo + \mjoff) [above] {$+1$};
-\node[left, font=\small] at (\xGnd, \ySo + \mjoff) [above] {$0$};
-\node[left, font=\small] at (\xGnd, \ySo + \mjoff + 0.3) [above] {$m_j$};
-\node[left, font=\small] at (\xGnd + \offset, \ySo + \mjoff) [above] {$-1$};
-
-
-
-% \draw[draw=black] (\xGnd - \offset - \lw -0.2, \yGnd - 0.2) rectangle ++(2*\offset + 2*\lw + 0.4, \ySo + 1.2);
-
-
+% =======================================================
+% m_j column headers
+% =======================================================
+\node[font=\small, above] at (\xGnd-\offset, \ySo+\mjoff)       {$+1$};
+\node[font=\small, above] at (\xGnd,         \ySo+\mjoff)       {$0$};
+\node[font=\small, above] at (\xGnd+\offset, \ySo+\mjoff)       {$-1$};
+\node[font=\small, above] at (\xGnd,         \ySo+\mjoff+0.3)   {$m_j$};
 
 \end{tikzpicture}
 \end{document}

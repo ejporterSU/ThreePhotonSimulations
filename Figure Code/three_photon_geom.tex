@@ -1,94 +1,162 @@
-\documentclass[tikz, border=10pt]{standalone}
+\documentclass[tikz, border=2pt]{standalone}
 \usepackage{tikz}
 \usepackage{amsmath}
-\usetikzlibrary{arrows.meta, decorations.pathmorphing}
 \usepackage{xcolor}
-\usetikzlibrary{shadings, arrows.meta, fadings}
+\usetikzlibrary{arrows.meta, decorations.pathmorphing, shadings, fadings}
+
 \begin{document}
 \begin{tikzpicture}
 
-% -------------------------------------------------------
+% =======================================================
+% Color definitions (wavelength-labeled)
+% =======================================================
+\definecolor{c689}{HTML}{FF0000}   % beam 1 (689 nm)
+\definecolor{c688}{HTML}{E33434}   % beam 2 (688 nm)
+\definecolor{c679}{HTML}{780202}   % beam 3 (679 nm)
+
+% =======================================================
 % Layout parameters
-% -------------------------------------------------------
-\definecolor{c689}{HTML}{ff0000}
-\definecolor{c688}{HTML}{E33434}
-\definecolor{c679}{HTML}{780202}
+% =======================================================
 
+% Beam geometry
+\def\rad{4}        % arrow length (beam path radius)
+\def\arrspace{1}   % gap between atom cloud and arrow start
 
-\def\rad{4}
-\def\arrspace{1}
-\def\ox{-3.5}  % x-position of origin
-\def\oy{-4.0}  % y-position of origin
-\def\al{0.8}   % axis length
+% Coordinate-axis inset (bottom-left corner)
+\def\ox{-3.5}      % inset origin x
+\def\oy{-4.0}      % inset origin y
+\def\al{0.8}       % axis arrow length
 
+% Polarization marker size
+\def\pollen{0.45}  % half-length of linear polarization arrow
 
-\tikzstyle{arrow} = [ultra thick,->,>=stealth, line width=7];
+% Gravity marker position
+\def\gx{-2.7}
+\def\gy{0.4}
+
+% =======================================================
+% Styles
+% =======================================================
+\tikzset{
+  beam/.style = {ultra thick, ->, >=stealth, line width=7},
+}
+
+% Circle-cross symbol for "into the page" polarization
 \newcommand{\polinto}[3]{%
   \draw[#3, line width=1.8pt] (#1,#2) circle (0.28);
   \draw[#3, line width=1.8pt] (#1-0.20,#2-0.20) -- (#1+0.20,#2+0.20);
   \draw[#3, line width=1.8pt] (#1+0.20,#2-0.20) -- (#1-0.20,#2+0.20);
 }
 
+% =======================================================
+% Beam arrows (three-photon geometry)
+% =======================================================
 
-\draw[c679, arrow] (0, -\arrspace - \rad) -- (0, -\arrspace) node[midway, left] {$\Omega_3, \vec{k}_3$};
-\draw[c688, arrow] (-150: \arrspace + \rad) -- ++(30: \rad) node[midway, above left] {$\Omega_2, \vec{k}_2$};
-\draw[c689, arrow] (-30: \arrspace + \rad) -- ++(150: \rad) node[midway, above right] {$\Omega_1, \vec{k}_1$};
+% Beam 3: vertical, from below
+\draw[c679, beam]
+  (0, -\arrspace-\rad) -- (0, -\arrspace)
+  node[midway, left] {$\Omega_3,\; \vec{k}_3$};
 
+% Beam 2: from lower-left at 30 deg
+\draw[c688, beam]
+  (-150:\arrspace+\rad) -- ++(30:\rad)
+  node[midway, above left] {$\Omega_2,\; \vec{k}_2$};
+
+% Beam 1: from lower-right at 150 deg
+\draw[c689, beam]
+  (-30:\arrspace+\rad) -- ++(150:\rad)
+  node[midway, above right] {$\Omega_1,\; \vec{k}_1$};
+
+% =======================================================
+% Atom cloud (center of beam intersection)
+% =======================================================
 
 % Soft outer halo
 \fill[blue!40, opacity=0.15] (0,0) circle (0.9);
 \fill[blue!50, opacity=0.2]  (0,0) circle (0.7);
+
 % Main cloud body
 \shadedraw[ball color=blue!55!cyan, opacity=0.75] (0,0) circle (0.5);
-\draw[black, ultra thick, dash pattern=on 8pt off 4pt, very thick] (-146:4) arc (-148 : -94 : 4) node[midway, below left] {$\varphi_{23}$};
-\draw[black, ultra thick, dash pattern=on 8pt off 4pt, very thick] (-86:4.1) arc (-86: -34 : 4.1)node[midway, below right] {$\varphi_{13}$};
 
+% =======================================================
+% Inter-beam angle arcs
+% =======================================================
+\draw[black, ultra thick, dash pattern=on 8pt off 4pt]
+  (-148:4) arc (-148:-94:4)
+  node[midway, below left] {$\varphi_{23}$};
 
-\draw[rounded corners=5pt, gray!30, line width=1.2pt, 
+\draw[black, ultra thick, dash pattern=on 8pt off 4pt]
+  (-86:4.1) arc (-86:-34:4.1)
+  node[midway, below right] {$\varphi_{13}$};
+
+% =======================================================
+% Polarization markers
+% =======================================================
+
+% Beam 3: linear polarization (double-headed arrow)
+\draw[{Stealth[scale=0.7]}-{Stealth[scale=0.7]}, c679, line width=1.8pt]
+  (-\pollen, -\arrspace-\rad-0.15) -- (\pollen, -\arrspace-\rad-0.15)
+  node[midway, below] {$\hat{\epsilon}_3$};
+
+% Beam 2: circular polarization (filled dot = into page)
+\draw[c688, line width=0.1pt, fill=c688]
+  (-150:\arrspace+\rad+0.2) circle (0.1)
+  node[above left] {$\hat{\epsilon}_2$};
+\draw[black, line width=0.1pt, fill=black]
+  (-150:\arrspace+\rad+0.2) circle (0.02);
+
+% Beam 1: circular polarization (filled dot = into page)
+\draw[c689, line width=0.1pt, fill=c689]
+  (-30:\arrspace+\rad+0.2) circle (0.1)
+  node[above right] {$\hat{\epsilon}_1$};
+\draw[black, line width=0.1pt, fill=black]
+  (-30:\arrspace+\rad+0.2) circle (0.02);
+
+% =======================================================
+% Quantization axis (magnetic field direction)
+% =======================================================
+\draw[-{Stealth[scale=1.4]}, line width=1.6pt, black]
+  (1.2, 1.2) -- (-1.2, 1.2)
+  node[midway, above, font=\small, black] {$\hat{B}$};
+
+% =======================================================
+% Gravity marker (circle-cross = into page)
+% =======================================================
+\draw[thick, black] (\gx,\gy) circle (0.22);
+\draw[thick, black]
+  (\gx-0.16, \gy-0.16) -- (\gx+0.16, \gy+0.16);
+\draw[thick, black]
+  (\gx+0.16, \gy-0.16) -- (\gx-0.16, \gy+0.16);
+\node[right, black, font=\small] at (\gx+0.25, \gy) {$\mathbf{g}$};
+
+% =======================================================
+% Coordinate-axis inset (bottom-left)
+% =======================================================
+
+% Background box
+\draw[rounded corners=5pt, gray!30, line width=1.2pt,
       fill=gray!5, draw=gray!40]
-  (\ox - 1.55*\al,\oy - 1.55*\al) rectangle ++(2.2*\al,2.2*\al);
+  (\ox-1.55*\al, \oy-1.55*\al) rectangle ++(2.2*\al, 2.2*\al);
 
-\draw[-{Stealth}, thick] (\ox,\oy) -- ++(-\al,0) node[left] {$x$};
+% x axis (points left)
+\draw[-{Stealth}, thick]
+  (\ox,\oy) -- ++(-\al, 0) node[left] {$x$};
 
-% y arrow: points DOWN (negative y direction in TikZ)
-\draw[-{Stealth}, thick] (\ox,\oy) -- ++(0,-\al) node[below] {$y$};
+% y axis (points down)
+\draw[-{Stealth}, thick]
+  (\ox,\oy) -- ++(0, -\al) node[below] {$y$};
 
-% z arrow: out of page — drawn as a dot with a circle (standard convention)
-
+% z axis (out of page — dot-in-circle convention)
 \draw[thick] (\ox,\oy) circle (0.18);
-\fill (\ox,\oy) circle (0.05);
-\node[above right] at (\ox+0.1,\oy+0.1) {$z$};
+\fill         (\ox,\oy) circle (0.05);
+\node[above right] at (\ox+0.1, \oy+0.1) {$z$};
 
-
-
-\def\gx{-2.7}
-\def\gy{0.4}
-\draw[thick, red!70!black] (\gx,\gy) circle (0.22);
-\draw[thick, red!70!black] 
-  (\gx-0.16,\gy-0.16) -- (\gx+0.16,\gy+0.16);
-\draw[thick, red!70!black] 
-  (\gx+0.16,\gy-0.16) -- (\gx-0.16,\gy+0.16);
-\node[right, red!70!black, font=\small] at (\gx+0.25,\gy) {$\mathbf{g}$};
-
-% --- quantization axis arrow (along x, pointing left) ---
-\draw[-{Stealth[scale=1.4]}, line width=1.6pt, red!60!black]
-  (1.2,1.2) -- (-1.2,1.2)
-  node[midway, above, font=\small, red!60!black] {$\hat{B}$};
-
-\node[anchor=north east, inner sep=6pt] at (5,2.6) {
+% =======================================================
+% Inset figure (Doppler-free spectrum)
+% =======================================================
+\node[anchor=north east, inner sep=6pt] at (5, 2.6) {
   \includegraphics[width=3cm]{doppler_free.pdf}
 };
-
-
-\def\pollen{0.45}  % half-length of polarization arrow
-\draw[{Stealth[scale=0.7]}-{Stealth[scale=0.7]}, c679, line width=1.8pt]
-  (-\pollen, -\arrspace-\rad-0.15) -- (\pollen, -\arrspace-\rad-0.15) node[midway, below] {$\hat{\epsilon}_3$};
-
-\draw[c688, line width=0.1pt, fill=c688] (-150: \arrspace + \rad + 0.2) circle (0.1) node[above left] {$\hat{\epsilon}_2$};
-\draw[black, line width=0.1pt, fill=black] (-150: \arrspace + \rad + 0.2) circle (0.02);
-
-\draw[c689, line width=0.1pt, fill=c689] (-30: \arrspace + \rad + 0.2) circle (0.1) node[above right] {$\hat{\epsilon}_1$}; 
-\draw[black, line width=0.1pt, fill=black] (-30: \arrspace + \rad + 0.2) circle (0.02);
 
 \end{tikzpicture}
 \end{document}
