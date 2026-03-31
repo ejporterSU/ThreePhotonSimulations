@@ -25,13 +25,13 @@
 \def\dz{0.3}
 
 % Horizontal offset between m_j sublevels
-\def\offset{2.5}
+\def\offset{2}
 
 % Detuning offset (dashed virtual levels)
 \def\detune{0.3}
 
 % Label x-offset (state term symbols on the left)
-\def\lboff{-3.7}
+\def\lboff{-3.2}
 
 % m_j header vertical offset above top level
 \def\mjoff{0.5}
@@ -59,27 +59,34 @@
 
 % --- 1S0 (ground state, no sublevels) ---
 \draw[thick] (\xGnd-\lw, \yGnd) -- (\xGnd+\lw, \yGnd);
-\node[left, font=\small] at (\xGnd+\lboff, \yGnd) {${}^1\!S_0$};
+
 
 % --- 3P0 (clock state, no sublevels) ---
 \draw[thick]  (\xPo-\lw, \yPo)          -- (\xPo+\lw, \yPo);
 \draw[thick, dashed] (\xPo-\lw, \yPo-\detune) -- (\xPo+\lw, \yPo-\detune);
-\draw[<->, >=stealth, font=\scriptsize]
+\draw[<->, >=stealth, font=\small]
   (\xPo+\lw, \yPo-\detune) -- (\xPo+\lw, \yPo)
   node[midway, right] {$\Delta_3$};
-\node[left, font=\small] at (\xPo+\lboff, \yPo) {${}^3\!P_0$};
+
 
 % --- 3P1 (three Zeeman sublevels: m_j = +1, 0, -1) ---
 \draw[thick] (\xPz-\lw-\offset, \yPz+\dz) -- (\xPz+\lw-\offset, \yPz+\dz);  % m_j = +1
 \draw[thick] (\xPz-\lw,         \yPz)      -- (\xPz+\lw,         \yPz);       % m_j =  0
 \draw[thick] (\xPz-\lw+\offset, \yPz-\dz)  -- (\xPz+\lw+\offset, \yPz-\dz);  % m_j = -1
-% detuning marker on m_j = +1
+% detuning marker on m_j = +delta
 \draw[thick, dashed]
   (\xPz-\lw-\offset, \yPz+\dz+\detune) -- (\xPz+\lw-\offset, \yPz+\dz+\detune);
-\draw[<->, >=stealth, font=\scriptsize]
+\draw[<->, >=stealth, font=\small]
   (\xPz+\lw-\offset, \yPz+\dz) -- (\xPz+\lw-\offset, \yPz+\dz+\detune)
   node[midway, right] {$\Delta_1$};
-\node[left, font=\small] at (\xPz+\lboff, \yPz) {${}^3\!P_1$};
+
+% zeeman
+\draw[dashed]
+(\xPz-\lw-\offset, \yPz) -- (\xPz+\lw+\offset, \yPz);
+\draw[<->, >=stealth, font=\small]
+(\xPz-\lw+\offset, \yPz) -- (\xPz-\lw+\offset , \yPz-\dz)
+node[midway, right] {$\delta\omega_B$};
+
 
 % --- 3S1 (three Zeeman sublevels: m_j = +1, 0, -1) ---
 \draw[thick] (\xSo-\lw+\offset, \ySo-\dz/2) -- (\xSo+\lw+\offset, \ySo-\dz/2);  % m_j = +1
@@ -88,37 +95,55 @@
 % detuning marker on m_j = 0
 \draw[thick, dashed]
   (\xSo-\lw, \ySo-\detune) -- (\xSo+\lw, \ySo-\detune);
-\draw[<->, >=stealth, font=\scriptsize]
+\draw[<->, >=stealth, font=\small]
   (\xSo-\lw, \ySo) -- (\xSo-\lw, \ySo-\dz)
   node[midway, left] {$\Delta_2$};
-\node[left, font=\small] at (\xSo+\lboff, \ySo) {${}^3\!S_1$};
+
 
 % =======================================================
 % Transition arrows (three-photon pathway)
 % =======================================================
 
 % Omega_1: 1S0 -> 3P1 (m_j = +1, detuned)
-\draw[arrow, c689, font=\scriptsize]
+\draw[arrow, c689, font=\small]
   (\xGnd, \yGnd) -- (\xPz-\offset, \yPz+\dz+\detune)
   node[midway, left] {$\Omega_1,\; \vec{k}_1$};
 
 % Omega_2: 3P1 (m_j = +1) -> 3S1 (m_j = 0, detuned)
-\draw[arrow, c688, font=\scriptsize]
+\draw[arrow, c688, font=\small]
   (\xPz-\offset, \yPz+\dz+\detune) -- (\xSo, \ySo-\detune)
   node[midway, above left] {$\Omega_2,\; \vec{k}_2$};
 
 % Omega_3: 3S1 (m_j = 0) -> 3P0 (detuned)
-\draw[arrow, c679, font=\scriptsize]
+\draw[arrow, c679, font=\small]
   (\xSo, \ySo-\detune) -- (\xPo, \yPo-\detune)
-  node[midway, right] {$\Omega_3,\; \vec{k}_3$};
+  node[midway, above right] {$\Omega_3,\; \vec{k}_3$};
+
+
+\draw[rounded corners=3pt, gray!30, line width=1.2pt,
+      fill=gray!5, draw=gray!40]
+  (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + 0.3);
+  
+\node[font=\small] at (\xGnd+\lboff, \yGnd) {${}^1\!S_0$};
+\node[font=\small] at (\xPo+\lboff, \yPo) {${}^3\!P_0$};
+\node[font=\small] at (\xPz+\lboff, \yPz) {${}^3\!P_1$};
+\node[font=\small] at (\xSo+\lboff, \ySo) {${}^3\!S_1$};
+
 
 % =======================================================
 % m_j column headers
 % =======================================================
+
+\draw[rounded corners=3pt, gray!30, line width=1.2pt,
+      fill=gray!5, draw=gray!40]
+  (-\lw - \offset, \ySo+\mjoff) rectangle ++(2*\offset + 2*\lw, 0.8);
+
 \node[font=\small, above] at (\xGnd-\offset, \ySo+\mjoff)       {$+1$};
 \node[font=\small, above] at (\xGnd,         \ySo+\mjoff)       {$0$};
 \node[font=\small, above] at (\xGnd+\offset, \ySo+\mjoff)       {$-1$};
 \node[font=\small, above] at (\xGnd,         \ySo+\mjoff+0.3)   {$m_j$};
+
+
 
 \end{tikzpicture}
 \end{document}
