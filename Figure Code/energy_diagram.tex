@@ -10,94 +10,79 @@
 % Layout parameters
 % -------------------------------------------------------
 \def\lw{0.65}     % half-length of sublevel lines
-\def\dz{0.22}     % Zeeman sublevel spacing (schematic)
-\def\offset{1}
-\def\detune{0.5}
+\def\dz{0.3}     % Zeeman sublevel spacing (schematic)
+\def\offset{2.5}
+\def\detune{0.3}
+\def\lboff{-3.7}
+\def\mjoff{0.5}
 
 % X centers for each level/manifold
-\def\xGnd{-4}
-\def\xPo{3.5}
-\def\xPz{-1.5}
+\def\xGnd{0}
+\def\xPo{0}
+\def\xPz{0}
 \def\xSo{0}
 
 % Y positions
-\def\yGnd{0}
-\def\yPz{3.5}     % 3P0 (~14504 cm^{-1})
-\def\yPo{4.3}     % 3P1 center (~14836 cm^{-1})
-\def\ySo{8.5}     % 3S1 center (~29038 cm^{-1})
+\def\yGnd{-0.5}
+\def\yPz{2.5}     % 3P0 (~14504 cm^{-1})
+\def\yPo{1.5}     % 3P1 center (~14836 cm^{-1})
+\def\ySo{5}     % 3S1 center (~29038 cm^{-1})
 
 % colors
 \definecolor{c689}{HTML}{ff0000}
 \definecolor{c688}{HTML}{E33434}
 \definecolor{c679}{HTML}{780202}
 
-
-% -------------------------------------------------------
-% 5s^2  1S0   J=0
-% -------------------------------------------------------
-\draw[thick] (\xGnd-\lw, \yGnd) -- (\xGnd+\lw, \yGnd);
-\node[left, font=\small] at (\xGnd - \lw - 0.1, \yGnd) {${}^1\!S_0$};
-
-% -------------------------------------------------------
-% 5s5p  3P0   J=0
-% -------------------------------------------------------
-\draw[thick] (\xPo-\lw, \yPo) -- (\xPo+\lw, \yPo);
-\node[left, font=\small] at (\xPo - \lw  - 0.1, \yPo) {${}^3\!P_0$};
-
-% -------------------------------------------------------
-% 5s5p  3P1   J=1   (mJ = -1, 0, +1)
-% -------------------------------------------------------
-\draw[thick] (\xPz-\lw + \offset, \yPz-\dz) -- (\xPz+\lw + \offset, \yPz-\dz);
-\draw[thick] (\xPz-\lw, \yPz)     -- (\xPz+\lw, \yPz);
-\draw[thick] (\xPz-\lw - \offset, \yPz+\dz) -- (\xPz+\lw-\offset, \yPz+\dz);
-\draw[thick, dashed] (\xPz-\lw - \offset, \yPz+\dz + \detune) -- (\xPz+\lw-\offset, \yPz+\dz + \detune);
-\draw[ <->, =>stealth] (\xPz - \offset + \lw, \yPz+\dz ) -- (\xPz+\lw - \offset, \yPz+\dz + \detune) node[midway, right] {$\Delta_1$};
-
-
-
-\node[right, font=\scriptsize] at (\xPz+\lw+0.08 + \offset, \yPz-\dz) {$-1$};
-\node[right, font=\scriptsize] at (\xPz+\lw+0.08 + \offset, \yPz)     {$\;0$};
-\node[right, font=\scriptsize] at (\xPz+\lw+0.08 + \offset, \yPz+\dz) {$+1$};
-\node[above, font=\scriptsize] at (\xPz+\lw+0.3 + \offset, \yPz+\dz+0.1) {$m_J$};
-\node[left, font=\small] at (\xPz - \lw - \offset -0.1, \yPz) {${}^3\!P_1$};
-
-% -------------------------------------------------------
-% 5s6s  3S1   J=1   (mJ = -1, 0, +1)
-% -------------------------------------------------------
-\draw[thick] (\xSo-\lw - \offset/2, \ySo-\dz) -- (\xSo+\lw - \offset/2, \ySo-\dz);
-\draw[thick] (\xSo-\lw, \ySo)     -- (\xSo+\lw, \ySo);
-\draw[thick] (\xSo-\lw + \offset/2, \ySo+\dz) -- (\xSo+\lw + \offset/2, \ySo+\dz);
-
-\draw[thick, dashed] (\xSo-\lw - \offset/2, \ySo-\dz - \detune) -- (\xSo+\lw - \offset/2, \ySo-\dz - \detune);
-\draw[ <->, =>stealth] (\xSo  + \lw, \ySo) -- (\xSo + \lw, \ySo- \detune - \dz) node[midway, right] {$\Delta_2$};
-
-
-
-\node[right, font=\scriptsize] at (\xSo+\lw+0.08 + \offset/2, \ySo-\dz) {$-1$};
-\node[right, font=\scriptsize] at (\xSo+\lw+0.08 + \offset/2, \ySo)     {$\,0$};
-\node[right, font=\scriptsize] at (\xSo+\lw+0.08 + \offset/2, \ySo+\dz) {$+1$};
-\node[above, font=\scriptsize] at (\xSo+\lw+0.3 + \offset/2, \ySo+\dz+0.1) {$m_J$};
-\node[left, font=\small] at (\xSo - \lw - 0.1 - \offset/2, \ySo) {${}^3\!S_1$};
-\draw[thick, dashed] (\xPo-\lw , \yPo + \detune) -- (\xPo+\lw , \yPo + \detune);
-\draw[ <->, =>stealth] (\xPo +\lw, \yPo + \detune) -- (\xPo +\lw , \yPo ) node[midway, right] {$\Delta_3$};
-
-
-% --------------------------
-% 689 nm transition
-% ---------------------------
 \tikzstyle{arrow} = [ultra thick,->,>=stealth];
-\draw[arrow, c689] (\xGnd, \yGnd) -> (\xPz - \offset, \yPz + \dz + \detune) node[midway,above left] {$\Omega_{689}, \vec{k}_{689}$};
 
 
-% --------------------------
-% 688 nm transition
-% ---------------------------
-\draw[arrow, c688] (\xPz - \offset, \yPz + \dz + \detune) --  ( \xSo - \offset/2, \ySo-\dz - \detune) node[midway,above left] {$\Omega_{688}, \vec{k}_{688}$};
 
-% --------------------------
-% 679 nm transition
-% ---------------------------
-\draw[arrow, c679] ( \xSo - \offset/2, \ySo-\dz - \detune) -- (\xPo, \yPo + \detune) node[midway,above right] {$\Omega_{679}, \vec{k}_{679}$};
+%%%%%% DRAW LEVELS
+% 1S0
+\draw[thick] (\xGnd-\lw, \yGnd) -- (\xGnd+\lw, \yGnd);
+\node[left, font=\small] at (\xGnd + \lboff, \yGnd) {${}^1\!S_0$};
+
+
+%3P0
+\draw[thick] (\xPo-\lw, \yPo) -- (\xPo+\lw, \yPo);
+\draw[thick, dashed] (\xPo-\lw, \yPo-\detune) -- (\xPo+\lw, \yPo-\detune); % detuning
+\draw[<->, >=stealth, font=\scriptsize] (\xPo +\lw, \yPo - \detune) -- (\xPo +\lw , \yPo ) node[midway, right] {$\Delta_3$};
+
+\node[left, font=\small] at (\xPo + \lboff, \yPo) {${}^3\!P_0$};
+
+
+%3P1 + SUBLEVELS
+\draw[thick] (\xPz-\lw - \offset, \yPz+\dz) -- (\xPz+\lw - \offset, \yPz+\dz); %MJ=+1
+\draw[thick] (\xPz-\lw, \yPz)     -- (\xPz+\lw, \yPz);%MJ=0
+\draw[thick] (\xPz-\lw + \offset, \yPz-\dz) -- (\xPz+\lw+\offset, \yPz-\dz);%MJ=-1
+\draw[thick, dashed] (\xPz-\lw - \offset, \yPz+\dz+\detune) -- (\xPz+\lw - \offset, \yPz+\dz+\detune); % detuning
+\draw[ <->, >=stealth, font=\scriptsize] (\xPz - \offset + \lw, \yPz+\dz ) -- (\xPz+\lw - \offset, \yPz+\dz + \detune) node[midway, right] {$\Delta_1$};
+\node[left, font=\small] at (\xPz + \lboff, \yPz) {${}^3\!P_1$};
+
+%3S1 + SUBLEVELS
+\draw[thick] (\xSo-\lw + \offset, \ySo-\dz/2) -- (\xSo+\lw + \offset, \ySo-\dz/2);%MJ=+1
+\draw[thick] (\xSo-\lw, \ySo)     -- (\xSo+\lw, \ySo);%MJ=0
+\draw[thick] (\xSo-\lw - \offset, \ySo+\dz/2) -- (\xSo+\lw - \offset, \ySo+\dz/2);%MJ=-1
+\draw[thick, dashed] (\xSo-\lw , \ySo-\detune) -- (\xSo+\lw, \ySo-\detune); % detuning
+\draw[ <->, >=stealth, font=\scriptsize] (\xSo  - \lw, \ySo) -- (\xSo - \lw, \ySo - \dz) node[midway, left] {$\Delta_2$};
+
+\node[left, font=\small] at (\xSo + \lboff, \ySo) {${}^3\!S_1$};
+
+
+%%%%%% DRAW TRANSITIONS
+\draw[arrow, c689, font=\scriptsize] (\xGnd, \yGnd) -> (\xPz - \offset, \yPz + \dz + \detune) node[midway, left] {$\Omega_{1}, \vec{k}_{1}$};
+\draw[arrow, c688, font=\scriptsize] (\xPz - \offset, \yPz + \dz + \detune) -> (\xSo , \ySo-\detune) node[midway, above left] {$\Omega_{2}, \vec{k}_{2}$};
+\draw[arrow, c679, font=\scriptsize]  (\xSo , \ySo-\detune) -> (\xPo , \yPo - \detune) node[midway, right] {$\Omega_{3}, \vec{k}_{3}$};
+
+%%% ZEEMAN LABELS
+\node[left, font=\small] at (\xGnd - \offset, \ySo + \mjoff) [above] {$+1$};
+\node[left, font=\small] at (\xGnd, \ySo + \mjoff) [above] {$0$};
+\node[left, font=\small] at (\xGnd, \ySo + \mjoff + 0.3) [above] {$m_j$};
+\node[left, font=\small] at (\xGnd + \offset, \ySo + \mjoff) [above] {$-1$};
+
+
+
+% \draw[draw=black] (\xGnd - \offset - \lw -0.2, \yGnd - 0.2) rectangle ++(2*\offset + 2*\lw + 0.4, \ySo + 1.2);
 
 
 

@@ -1,0 +1,44 @@
+\documentclass[tikz, border=10pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usetikzlibrary{arrows.meta, decorations.pathmorphing}
+\usepackage{xcolor}
+\begin{document}
+\begin{tikzpicture}
+
+% -------------------------------------------------------
+% Layout parameters
+% -------------------------------------------------------
+\definecolor{c689}{HTML}{ff0000}
+\definecolor{c688}{HTML}{E33434}
+\definecolor{c679}{HTML}{780202}
+
+\def\centx{0}
+\def\centy{0}
+\def\boxx{6.5}
+\def\boxy{6.5}
+\def\boxvspace{-0.5}
+\def\rad{2}
+
+\tikzstyle{arrow} = [ultra thick,->,>=stealth, line width=3];
+
+
+\coordinate (A) at ({\rad*cos(-60)}, {\rad*sin(-60)});
+\coordinate (B) at ({\rad*cos(-180)}, {\rad*sin(-180)});
+\coordinate (C) at ({\rad*cos(60)}, {\rad*sin(60)});
+
+\draw[c689, arrow, font=\huge] (A) -- (B) node[midway, below left] {$\vec{k}_1$};
+\draw[c688, arrow, font=\huge] (B) -- (C) node[midway, above left] {$\vec{k}_2$};
+\draw[c679, arrow, font=\huge] (C) -- (A) node[midway, right] {$-\vec{k}_3$};
+
+\draw[dash pattern=on 12pt off 4pt, ultra thick] (-\boxx/2, -\boxy/2) rectangle ++(\boxx, \boxy+\boxvspace);
+
+
+% \draw[black] (\centx, \centy) circle (\rad);
+\node[black, above, font=\bfseries\Large] at (0, \boxy/2 - 1.2) {Doppler-Free Condition};
+\node[black, above, font=\LARGE] at (0, -\boxy/2 + 0.1) {$(\textcolor{c689}{\vec{k}_1} + \textcolor{c688}{\vec{k}_2} - \textcolor{c679}{\vec{k}_3} ) \cdot \vec{v}  = 0$};
+
+
+
+\end{tikzpicture}
+\end{document}
