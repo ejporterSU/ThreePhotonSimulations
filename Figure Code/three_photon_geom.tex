@@ -38,7 +38,7 @@
 % Styles
 % =======================================================
 \tikzset{
-  beam/.style = {ultra thick, ->, >=stealth, line width=7},
+  beam/.style = {ultra thick, ->, >=stealth, line width=7, font=\Large},
 }
 
 % Circle-cross symbol for "into the page" polarization
@@ -72,41 +72,41 @@
 % =======================================================
 
 % Soft outer halo
-\fill[blue!40, opacity=0.15] (0,0) circle (0.9);
-\fill[blue!50, opacity=0.2]  (0,0) circle (0.7);
+\fill[blue!40, opacity=0.15] (0,0) circle (0.8);
+\fill[blue!50, opacity=0.2]  (0,0) circle (0.6);
 
 % Main cloud body
-\shadedraw[ball color=blue!55!cyan, opacity=0.75] (0,0) circle (0.5);
+\shadedraw[ball color=blue!55!cyan, opacity=0.75] (0,0) circle (0.4);
 
 % =======================================================
 % Inter-beam angle arcs
 % =======================================================
-\draw[black, ultra thick, dash pattern=on 8pt off 4pt]
+\draw[black, ultra thick, dash pattern=on 8pt off 4pt, font=\Large]
   (-148:4) arc (-148:-94:4)
-  node[midway, below left] {$\varphi_{23}$};
+  node[midway, below ] {$\theta_{23}$};
 
-\draw[black, ultra thick, dash pattern=on 8pt off 4pt]
+\draw[black, ultra thick, dash pattern=on 8pt off 4pt, font=\Large]
   (-86:4.1) arc (-86:-34:4.1)
-  node[midway, below right] {$\varphi_{13}$};
+  node[midway, below right] {$\theta_{31}$};
 
 % =======================================================
 % Polarization markers
 % =======================================================
 
 % Beam 3: linear polarization (double-headed arrow)
-\draw[{Stealth[scale=0.7]}-{Stealth[scale=0.7]}, c679, line width=1.8pt]
+\draw[{Stealth[scale=0.7]}-{Stealth[scale=0.7]}, c679, line width=1.8pt, font=\large]
   (-\pollen, -\arrspace-\rad-0.15) -- (\pollen, -\arrspace-\rad-0.15)
   node[midway, below] {$\hat{\epsilon}_3$};
 
 % Beam 2: circular polarization (filled dot = into page)
-\draw[c688, line width=0.1pt, fill=c688]
+\draw[c688, line width=0.1pt, fill=c688, font=\large]
   (-150:\arrspace+\rad+0.2) circle (0.1)
   node[above left] {$\hat{\epsilon}_2$};
 \draw[black, line width=0.1pt, fill=black]
   (-150:\arrspace+\rad+0.2) circle (0.02);
 
 % Beam 1: circular polarization (filled dot = into page)
-\draw[c689, line width=0.1pt, fill=c689]
+\draw[c689, line width=0.1pt, fill=c689, font=\large]
   (-30:\arrspace+\rad+0.2) circle (0.1)
   node[above right] {$\hat{\epsilon}_1$};
 \draw[black, line width=0.1pt, fill=black]
@@ -117,7 +117,7 @@
 % =======================================================
 \draw[-{Stealth[scale=1.4]}, line width=1.6pt, black]
   (1.2, 1.2) -- (-1.2, 1.2)
-  node[midway, above, font=\small, black] {$\hat{B}$};
+  node[midway, above, font=\Large, black] {$\vec{B}$};
 
 % =======================================================
 % Gravity marker (circle-cross = into page)
@@ -127,7 +127,7 @@
   (\gx-0.16, \gy-0.16) -- (\gx+0.16, \gy+0.16);
 \draw[thick, black]
   (\gx+0.16, \gy-0.16) -- (\gx-0.16, \gy+0.16);
-\node[right, black, font=\small] at (\gx+0.25, \gy) {$\mathbf{g}$};
+\node[right, black, font=\Large] at (\gx+0.25, \gy) {$\vec{g}$};
 
 % =======================================================
 % Coordinate-axis inset (bottom-left)
@@ -154,8 +154,8 @@
 % =======================================================
 % Inset figure (Doppler-free spectrum)
 % =======================================================
-\node[anchor=north east, inner sep=6pt] at (5, 2.6) {
-  \includegraphics[width=3cm]{doppler_free.pdf}
+\node[anchor=north east, inner sep=6pt] at (5.7, 3.3) {
+  \includegraphics[width=4cm]{doppler_free.pdf}
 };
 
 \end{tikzpicture}
