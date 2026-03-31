@@ -10,8 +10,8 @@ from matplotlib.gridspec import GridSpec
 # formatting and constants
 #region
 # ── Shared Style ───────────────────────────────────────────────────────────────
-plt.rcParams.update({'font.size': 10, 'font.family': 'sans-serif', 'axes.linewidth': 0.8})
-FS_AXIS  = 13    # axis labels
+plt.rcParams.update({'font.size': 13, 'font.family': 'sans-serif', 'axes.linewidth': 0.8})
+FS_AXIS  = 15    # axis labels
 FS_PANEL = 12    # a) b) panel labels
 MARKER_S = 75    # scatter marker size (main plots)
 LW_THEORY = 2    # theory / fit curves
@@ -19,9 +19,12 @@ LW_THEORY = 2    # theory / fit curves
 # ── Shared Colors ──────────────────────────────────────────────────────────────
 color_3v   = "#CC0F0F"   # 3-photon / 3P0
 color_1v   = "#0905D3"   # 1-photon
+marker_3v = 's'
+marker_1v = 'o'
 color_dlim = "#393A3C"   # Doppler limit
-color_1S0  = '#1A1C20'   # ground state
-color_3P0  = color_3v    # same red
+
+color_1S0  = "#089EA3"   # ground state
+color_3P0  = "#CC0F0F"    # same red
 color_3P1  = "#eb45d0"
 color_3P2  = "#9fd34b"
 
@@ -135,18 +138,18 @@ pop_3P0_data = (0.5 * (data_ro1[:, 3] - pop_3P2_data)
 
 # ── Figure Layout ──────────────────────────────────────────────────────────────
 fig = plt.figure(figsize=(6.5, 9))
-gs  = GridSpec(2, 1, hspace=0.38, left=0.13, right=0.95, top=0.96, bottom=0.07)
+gs  = GridSpec(2, 1, hspace=0.22, left=0.13, right=0.95, top=0.96, bottom=0.07)
 ax1 = fig.add_subplot(gs[0])
 ax2 = fig.add_subplot(gs[1])
 
-# ── Panel (a): Linewidth vs Rabi Frequency ─────────────────────────────────────
+# ── Panel (a): Linewidth vs Rabi  ─────────────────────────────────────
 ax1.scatter(omega_1v / 1e3, lw_1v_khz,
-            marker='o', ec='k', fc=color_1v, s=MARKER_S, zorder=2)
+            marker=marker_1v, ec='k', fc=color_1v, s=MARKER_S, zorder=2)
 ax1.scatter(omega_3v / 1e3, lw_3v_khz,
-            marker='o', ec='k', fc=color_3v, s=MARKER_S, zorder=2)
+            marker=marker_3v, ec='k', fc=color_3v, s=MARKER_S, zorder=2)
 
 ax1.axhline(vdopp / 1e3, color=color_dlim, linestyle='-.', zorder=0)
-ax1.text(0.1e3, 45, rf"Doppler Limit [{T_uk}$\,\mu$K]", c=color_dlim)
+ax1.text(0.1e3, 45, rf"Doppler Limit [{T_uk}$\,\mu$K]", c=color_dlim, fontsize=11)
 
 ax1.plot(rabi_freq / 1e3, lw_3v_theory / 1e3,
          color=color_3v, linewidth=LW_THEORY, linestyle='--', zorder=1)
@@ -154,9 +157,9 @@ ax1.plot(rabi_freq / 1e3, lw_1v_theory / 1e3,
          color=color_1v, linewidth=LW_THEORY, linestyle='--', zorder=1)
 
 legend_marker_size = 8
-ax1.plot([], [], linestyle='--', marker='o', markersize=legend_marker_size,
+ax1.plot([], [], linestyle='--', marker=marker_3v, markersize=legend_marker_size,
          markeredgecolor='k', markerfacecolor=color_3v, label='3-Photon', color=color_3v)
-ax1.plot([], [], linestyle='--', marker='o', markersize=legend_marker_size,
+ax1.plot([], [], linestyle='--', marker=marker_1v, markersize=legend_marker_size,
          markeredgecolor='k', markerfacecolor=color_1v, label='1-Photon', color=color_1v)
 
 ax1.set_xlabel(r'$\Omega_r$ (kHz)', fontsize=FS_AXIS)
@@ -167,8 +170,8 @@ ax1.set_xscale('log')
 ax1.set_yscale('log')
 ax1.set_xticks([0.1, 1, 10, 1e2, 1e3])
 ax1.set_xticklabels([0.1, 1, 10, r'$10^2$', r'$10^3$'])
-ax1.set_yticks([1, 10, 1e2, 1e3])
-ax1.set_yticklabels([1, 10, r'$10^2$', r'$10^3$'])
+ax1.set_yticks([1, 10, 1e2, 1e3, 1e4])
+ax1.set_yticklabels([1, 10, r'$10^2$', r'$10^3$', r'$10^4$'])
 ax1.tick_params(axis='both', direction='in', which='both', width=1.5)
 ax1.legend(loc='lower right', fontsize=12, frameon=False, handlelength=2.5, handletextpad=0.2)
 
@@ -178,12 +181,12 @@ ax1.plot([2, 7], [1e3, 178], c='k', lw=1.5, solid_capstyle='round')
 
 # Inset: frequency scans
 axins = ax1.inset_axes([0.05, 0.65, 0.3, 0.3])
-axins.plot(f_1v_shifted, y_1v_norm, '.', color=color_1v, alpha=0.5, markersize=5)
+axins.scatter(f_1v_shifted, y_1v_norm, marker=marker_1v, color=color_1v, alpha=0.7, s=12)
 axins.plot(f_fine, y_1v_fit, color=color_1v, linewidth=1, linestyle=':')
-axins.plot(f_3v_shifted, y_3v_norm, '.', color=color_3v, alpha=0.5, markersize=5)
+axins.scatter(f_3v_shifted, y_3v_norm, marker=marker_3v, color=color_3v, alpha=0.7, s=12)
 axins.plot(f_fine, y_3v_fit, color=color_3v, linewidth=1, linestyle=':')
 axins.set_yticks([])
-axins.set_xlabel(r'$\Delta\nu$ (kHz)', fontsize=8, labelpad=1)
+axins.set_xlabel(r'$\Delta\nu$ (kHz)', fontsize=8, labelpad=-1.5)
 axins.tick_params(axis='x', labelsize=8)
 axins.set_xlim(-90, 90)
 axins.set_ylim(-0.1, 1.2)
@@ -195,15 +198,22 @@ ax1.text(-0.12, 1.02, 'a)', transform=ax1.transAxes,
          fontsize=FS_PANEL, fontweight='bold', va='top', ha='left')
 
 # ── Panel (b): Rabi Flopping ───────────────────────────────────────────────────
-ax2.scatter(t_data, pop_1S0_data, s=50, marker='o', ec='k', color=color_1S0)
-ax2.scatter(t_data, pop_3P0_data, s=50, marker='o', ec='k', color=color_3P0)
-ax2.scatter(t_data, pop_3P1_data, s=30, marker='^', ec='#2c2a2a', color=color_3P1, alpha=0.8)
-ax2.scatter(t_data, pop_3P2_data, s=30, marker='^', ec='#2c2a2a', color=color_3P2, alpha=0.8)
+ax2.plot(t_data, 0.1*t_data/10, linestyle='--', color=color_3P2)
+ax2.plot(t_data, 0.05*t_data/10, linestyle='--', color=color_3P1)
+ax2.plot(t_data, (0.5 + 0.5*np.cos(2*np.pi * t_data/6))*np.exp(-t_data/35), linestyle='--', color=color_1S0)
+ax2.plot(t_data, (0.5 - 0.5*np.cos(2*np.pi * t_data/6))*np.exp(-t_data/35), linestyle='--', color=color_3P0)
 
-ax2.plot([], [], marker='s', linestyle='--', label=r'$^1S_0$', color=color_1S0)
-ax2.plot([], [], marker='s', linestyle='--', label=r'$^3P_0$', color=color_3P0)
-ax2.plot([], [], marker='^', linestyle='--', label=r'$^3P_1$', color=color_3P1)
-ax2.plot([], [], marker='^', linestyle='--', label=r'$^3P_2$', color=color_3P2)
+ax2.scatter(t_data, pop_1S0_data, s=50, marker='s', ec='k', color=color_1S0)
+ax2.scatter(t_data, pop_3P0_data, s=50, marker='^', ec='k', color=color_3P0)
+ax2.scatter(t_data, pop_3P1_data, s=30, marker='o', ec='k', color=color_3P1, alpha=0.8)
+ax2.scatter(t_data, pop_3P2_data, s=30, marker='*', ec='k', color=color_3P2, alpha=0.8)
+
+
+
+ax2.plot([], [], marker='s', linestyle='--', label=r'$^1S_0$', color=color_1S0, markeredgewidth=0.5, markeredgecolor='black', markersize=12)
+ax2.plot([], [], marker='^', linestyle='--', label=r'$^3P_0$', color=color_3P0, markeredgewidth=0.5, markeredgecolor='black', markersize=12)
+ax2.plot([], [], marker='o', linestyle='--', label=r'$^3P_1$', color=color_3P1, markeredgewidth=0.5, markeredgecolor='black', markersize=9)
+ax2.plot([], [], marker='*', linestyle='--', label=r'$^3P_2$', color=color_3P2, markeredgewidth=0.5, markeredgecolor='black', markersize=9)
 
 ax2.set_xlabel(r'Pulse Duration ($\mu$s)', fontsize=FS_AXIS)
 ax2.set_ylabel('Relative State Population', fontsize=FS_AXIS)
