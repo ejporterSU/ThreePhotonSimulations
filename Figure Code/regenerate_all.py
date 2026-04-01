@@ -31,4 +31,5 @@ for stem, fn, kwargs in figures:
     plt.close(fig)
     print("saved.")
 
+
 print("All figures regenerated.")

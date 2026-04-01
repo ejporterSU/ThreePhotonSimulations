@@ -6,9 +6,8 @@ from matplotlib.transforms import ScaledTranslation
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 import os
-os.chdir(r"C:/Users/Erik\Desktop/Kasevich Lab/ThreePhotonSimulations/Figure Code")
 from fig_style import *
-_DATA_DIR = Path(__file__).parent / 'Data'
+_DATA_DIR = Path(__file__).parent.parent / 'Data'
 
 from fig_style import *
 
