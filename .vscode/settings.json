@@ -2,5 +2,23 @@
     "python.defaultInterpreterPath": "C:\\Users\\Erik\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
     "jupyter.kernelSpecFindPreference": [],
     "jupyter.notebookFileRoot": "${workspaceFolder}",
-    "notebook.output.scrolling": true
+    "notebook.output.scrolling": true,
+    "latex-workshop.latex.recipes": [
+    {
+        "name": "pdflatex",
+        "tools": ["pdflatex"]
+    }
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "-quiet",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "%DOC%"
+            ]
+        }
+    ]
 }
