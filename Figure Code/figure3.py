@@ -5,9 +5,8 @@ from matplotlib.gridspec import GridSpec
 from pathlib import Path
 from fig_style import *
 import os
-os.chdir(r"C:/Users/Erik\Desktop/Kasevich Lab/ThreePhotonSimulations/Figure Code")
 from fig_style import *
-_DATA_DIR = Path(__file__).parent / 'Data'
+_DATA_DIR = Path(__file__).parent.parent / 'Data'
 
 
 
@@ -74,7 +73,7 @@ def make_figure():
 
     tpi2 = 0.06
     # ax_p1.axvspan(-.02, tpi2, facecolor='g', alpha=0.2)
-    
+
     # ax_p1.axvspan(tpi2, 0.64, facecolor='b', alpha=0.2)
 
 

@@ -8,8 +8,8 @@ from matplotlib.gridspec import GridSpec
 import sys
 from pathlib import Path
 import os
-os.chdir(r"C:/Users/Erik\Desktop/Kasevich Lab/ThreePhotonSimulations/Figure Code")
 from fig_style import *
+
 _DATA_DIR = Path(__file__).parent.parent / 'Data'
 
 
@@ -106,10 +106,9 @@ def make_figure():
     f_limit3      = 2 * 0.89 * rabi_freq
     lw_1v_theory  = np.sqrt(f_limit3**2 + vdopp**2)
     lw_3v_theory  = f_limit3
-    print(os.getcwd())
     # ── Panel (b) data ─────────────────────────────────────────────────────────
-    data_ro1 = np.loadtxt('C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Data/RabiFloppingData1.txt', delimiter=',', skiprows=2)
-    data_ro2 = np.loadtxt('C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Data/RabiFloppingData2.txt', delimiter=',', skiprows=2)
+    data_ro1 = np.loadtxt(_DATA_DIR / 'RabiFloppingData1.txt', delimiter=',', skiprows=2)
+    data_ro2 = np.loadtxt(_DATA_DIR / 'RabiFloppingData2.txt', delimiter=',', skiprows=2)
 
     assert np.all(data_ro1[:, 0] == data_ro2[:, 0])
     t_data       = data_ro1[:, 0]
