@@ -1,11 +1,11 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.3.31)  31 MAR 2026 22:06
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.3.30)  1 APR 2026 10:59
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
-**./temp_fig.tex
-(temp_fig.tex
+**./doppler_erasing.tex
+(doppler_erasing.tex
 LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
+L3 programming layer <2025-12-24>
 
 (C:\Users\Erik\AppData\Local\Programs\MiKTeX\tex/latex/standalone\standalone.cl
 s
@@ -537,8 +537,8 @@ File: pgflibraryfadings.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 ex.def
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count320
-) (temp_fig.aux)
-\openout1 = `temp_fig.aux'.
+) (doppler_erasing.aux)
+\openout1 = `doppler_erasing.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 19.
 LaTeX Font Info:    ... okay on input line 19.
@@ -580,46 +580,56 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 g
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-LaTeX Font Info:    Trying to load font information for U+msa on input line 48.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 71.
 
  (C:\Users\Erik\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 48.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 71.
 
 
 (C:\Users\Erik\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
+Missing character: There is no ; in font nullfont!
+Missing character: There is no ; in font nullfont!
 [1
 
 
 Non-PDF special ignored!
-<special> papersize=467.42479pt,300.5989pt
-{C:/Users/Erik/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] (temp_fig.aux
-)
+<special> papersize=485.29663pt,361.37175pt
+{C:/Users/Erik/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
+(doppler_erasing.aux)
  ***********
 LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
+L3 programming layer <2025-12-24>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 14864 strings out of 467867
- 313440 string characters out of 5418818
- 704482 words of memory out of 5000000
- 43476 multiletter control sequences out of 15000+600000
- 631776 words of font info for 56 fonts, out of 8000000 for 9000
+ 14947 strings out of 467871
+ 314934 string characters out of 5418860
+ 718298 words of memory out of 5000000
+ 43548 multiletter control sequences out of 15000+600000
+ 637463 words of font info for 79 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 102i,7n,107p,419b,887s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 102i,10n,107p,426b,923s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/c
 mbx10.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfo
-nts/cm/cmmi9.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/type1/publi
-c/amsfonts/cm/cmr6.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/type1
-/public/amsfonts/cm/cmr9.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts
-/type1/public/amsfonts/cm/cmsy9.pfb>
-Output written on temp_fig.pdf (1 page, 63504 bytes).
+nts/cm/cmmi10.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/type1/publ
+ic/amsfonts/cm/cmmi12.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/ty
+pe1/public/amsfonts/cm/cmmi8.pfb><C:/Users/Erik/AppData/Local/Programs/MiKTeX/f
+onts/type1/public/amsfonts/cm/cmmi9.pfb><C:/Users/Erik/AppData/Local/Programs/M
+iKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Erik/AppData/Local/Pro
+grams/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/Erik/AppData/Lo
+cal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/Erik/AppD
+ata/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/Eri
+k/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr9.pfb><C:/Use
+rs/Erik/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb
+><C:/Users/Erik/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cm
+sy9.pfb>
+Output written on doppler_erasing.pdf (1 page, 133466 bytes).
 PDF statistics:
- 68 PDF objects out of 1000 (max. 8388607)
+ 105 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
- 139 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 145 words of extra memory for PDF output out of 10000 (max. 10000000)
 
