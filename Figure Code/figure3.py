@@ -6,8 +6,15 @@ from pathlib import Path
 from fig_style import *
 import os
 from fig_style import *
+from pdf2image import convert_from_path
 _DATA_DIR = Path(__file__).parent.parent / 'Data'
+_FIGURE_DIR = Path(__file__).parent.parent / 'Figure Code'
 
+
+def load_pdf_as_array(pdf_path, dpi=600):
+    """Rasterize first page of a PDF and return as a numpy array."""
+    pil_img = convert_from_path(pdf_path, dpi=dpi)[0]
+    return np.array(pil_img)
 
 
 def make_figure():
@@ -22,13 +29,13 @@ def make_figure():
     ax_p2 = fig.add_subplot(gs[1])
 
     # ── Sequence image ─────────────────────────────────────────────────────────
-    img = plt.imread(str(_DATA_DIR / 'seq_image.png'))
+    img = load_pdf_as_array(_FIGURE_DIR / 'doppler_erasing.pdf')
     ax_img.imshow(img)
     ax_img.axis('off')
 
     # ── Panel labels ───────────────────────────────────────────────────────────
     # 'a)' uses fig.text because ax_img has non-standard coordinates
-    fig.text(0.01, 0.95, 'a)', fontsize=FS_PANEL, fontweight='bold', va='top', ha='left')
+    fig.text(0.03, 0.95, 'a)', fontsize=FS_PANEL, fontweight='bold', va='top', ha='left')
     add_panel_label(ax_p1, 'b)', x=-0.17)
     add_panel_label(ax_p2, 'c)', x=-0.17)
 
