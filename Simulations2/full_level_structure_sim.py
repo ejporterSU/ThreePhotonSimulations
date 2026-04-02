@@ -20,15 +20,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import qutip as qt
 import scipy.constants as const
+from scipy.special import erf
+from tqdm import tqdm
 
 
 # --- HELPERS ----------------------
 #region
-def get_k_hat(theta, theta_z):
-    return np.array([np.cos(theta_z)*np.cos(theta),
-                    np.cos(theta_z)*np.sin(theta),
-                    np.sin(theta_z)])
-
 def decompose_polarization(eps_hat, quant_axis):
     q   = np.array(quant_axis, dtype=float)
     q   = q / np.linalg.norm(q)
@@ -77,8 +74,8 @@ def get_zeeman_detuning(g_J, B_field):
 # ── Constants ─────────────────────────────────────────────────────────────── #
 #region
 HBAR = const.hbar
-H = const.h
-C=const.c
+H    = const.h
+C    = const.c
 PI   = np.pi
 AMU  = 1.66e-27   # atomic mass unit [kg]
 kb   = const.k    # Boltzmann constant [J/K]
@@ -131,8 +128,8 @@ v2 = qt.basis(N, 5)   # |3S1, mJ=0>
 v3 = qt.basis(N, 6)   # |3S1, mJ=+1>
 v_manifold = np.array([v1, v2, v3])
 
-r = qt.basis(N, 7)   # |3P2, mJ=all> dark state decay channel
-ds = qt.basis(N, 8)   # |3P0>
+r = qt.basis(N, 7)   # |3P0>
+ds = qt.basis(N, 8)   # |3P2, mJ=all> dark state decay channel
 
 states = [g, e1, e2, e3, v1, v2, v3, r, ds]
 projs = [state * state.dag() for state in states]
@@ -151,26 +148,44 @@ theta_0,  theta_0z = np.radians(59.4384), 0.0   # 689 nm
 theta_1,  theta_1z = np.radians(-59.64),  0.0   # 688 nm
 theta_2,  theta_2z = 0.0,                 0.0   # 679 nm (along x)
 
-k_vec_0 = (2*PI / lambda_689) * get_k_hat(theta_0, theta_0z)
-k_vec_1 = (2*PI / lambda_688) * get_k_hat(theta_1, theta_1z)
-k_vec_2 = (2*PI / lambda_679) * get_k_hat(theta_2, theta_2z)
-k_vecs  = (k_vec_0, k_vec_1, k_vec_2)
-
 # Rabi frequencies [rad/s] 
-Omega_689 = 2*PI * 10e6     # 689 nm:  1S0  <-> 3P1(mJ=+1)
-Omega_688 = 2*PI * 100e6    # 688 nm:  3P1  <-> 3S1(mJ=0)
-Omega_679 = 2*PI * 100e6    # 679 nm:  3S1  <-> 3P0
+Omega_689 = 2 * 2*PI * 4.4e6     # 689 nm:  1S0  <-> 3P1(mJ=+1)
+Omega_688 = 2 * 2*PI * 30e6    # 688 nm:  3P1  <-> 3S1(mJ=0)
+Omega_679 = 2*PI * 32e6    # 679 nm:  3S1  <-> 3P0
 
-B_field_G = 40
+B_field_G = 20
 B_field_T = B_field_G * 1e-4
 dwB_3p1= get_zeeman_detuning(G_J_3P1, B_field_T)
 dwB_3s1= get_zeeman_detuning(G_J_3S1, B_field_T)
 
 
+
+
 # Single-photon detunings from each resonance [rad/s]  (positive = blue)
-Delta_1 = 2*PI *  100e6   # 689 nm detuning from 1S0 -> 3P1
-Delta_2 = 2*PI *  500e6   # 688 nm detuning from 3P1 -> 3S1
-Delta_3 = 2*PI *  596.05e6    # 679 nm detuning from 3S1 -> 3P0
+delta_AC = 2*PI * 1.17e6
+Delta_1 = dwB_3p1 + 2*PI * 5.0e6   # 689 nm detuning from 1S0 -> 3P1
+Delta_2 = 2*PI *  400e6   # 688 nm detuning from 3P1 -> 3S1
+Delta_3 = 2*PI *  400e6  + Delta_1  + delta_AC # 679 nm detuning from 3S1 -> 3P0
+
+# ── Drive envelope ────────────────────────────────────────────────────────── #
+# USE_RAMP = True  → erf ramp, reaches ~99% at t ≈ 2*tau_ramp (~200 ns total)
+# USE_RAMP = False → square wave (instant turn-on)
+USE_RAMP  = True
+tau_ramp  = 90e-9   # erf width [s]; rise/fall spans 0→2*tau_ramp on each edge
+T_MAX  = 3e-6   # total time [s]
+dt = 0e-9
+N_t    = int(T_MAX/dt) + 1
+tlist  = np.linspace(0, T_MAX, N_t)
+
+
+def drive_envelope(t, args):
+    if USE_RAMP:
+        # erf centered at tau_ramp: ~0 at t=0, ~1 at t=2*tau_ramp
+        ramp_up   = 0.5 * (1.0 + erf(1.5 * t / tau_ramp - 1.5))
+        # mirror at T_MAX: ~1 until T_MAX - 2*tau_ramp, ~0 at t=T_MAX
+        ramp_down = 0.5 * (1.0 + erf(1.5 * (T_MAX - t) / tau_ramp - 1.5))
+        return ramp_up * ramp_down
+    return 1.0
 
 
 # ── Hamiltonian in the rotating frame (RWA) ───────────────────────────────── #
@@ -178,6 +193,10 @@ Delta_3 = 2*PI *  596.05e6    # 679 nm detuning from 3S1 -> 3P0
 couplings_689 = get_coupling_factor(pol_vecs[0], quant_axis)
 couplings_688 = get_coupling_factor(pol_vecs[1], quant_axis)
 couplings_679 = get_coupling_factor(pol_vecs[2], quant_axis)
+
+
+
+
 
 H_diag = (
     - (Delta_1 + dwB_3p1           )  * projs[1]
@@ -193,15 +212,18 @@ H_689 = Omega_689/2 * (couplings_689[-1] * (e1 * g.dag() + g * e1.dag()) +
                     couplings_689[+1] * (e3 * g.dag() + g * e3.dag()) )
 
 H_688 = Omega_688/2 * (couplings_688[+1] * (e1 * v2.dag() + v2 * e1.dag()) + 
-                    couplings_688[-1] * (e2 * v1.dag() + v1 * e2.dag()) +
-                    couplings_688[+1] * (e2 * v3.dag() + v3 * e2.dag()) + 
-                    couplings_688[-1] * (e3 * v2.dag() + v2 * e3.dag()) )
+                        couplings_688[-1] * (e2 * v1.dag() + v1 * e2.dag()) +
+                        couplings_688[+1] * (e2 * v3.dag() + v3 * e2.dag()) + 
+                        couplings_688[-1] * (e3 * v2.dag() + v2 * e3.dag()) )
 
 H_679 = Omega_679/2 * (couplings_679[0] * (v2 * r.dag() + r * v2.dag()))
 
 
 H_coupling = H_688 + H_679 + H_689
-H = H_diag + H_coupling
+if USE_RAMP:
+    H = [H_diag, [H_coupling, drive_envelope]]
+else:
+    H = H_diag + H_coupling
 
 # ── Collapse operators (Lindblad spontaneous emission) ────────────────────── #
 c_3P1_to_1S0 = [np.sqrt(gamma_689) * (g * e1.dag()),
@@ -224,13 +246,11 @@ c_ops = c_3P1_to_1S0 + c_3S1_to_3P1 + c_3S1_to_3P0 + c_3S1_to_3P2
 rho0 = g*g.dag()   # all population in 1S0
 
 # ── Time evolution ────────────────────────────────────────────────────────── #
-T_MAX  = 2e-6   # total time [s]
-dt = 10e-9
-N_t    = int(T_MAX/dt) + 1
-tlist  = np.linspace(0, T_MAX, N_t)
+
 
 result = qt.mesolve(H, rho0, tlist, c_ops, e_ops=projs)
 pops   = result.expect   # [pop_1S0, pop_3P1, pop_3S1, pop_3P0]
+
 
 # ── Plot ──────────────────────────────────────────────────────────────────── #
 fig, ax = plt.subplots(figsize=(8, 4))
@@ -249,3 +269,9 @@ plt.show()
 
 
 
+
+
+
+
+
+# %%
