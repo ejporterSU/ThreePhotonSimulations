@@ -77,8 +77,8 @@ print(rf"""Input Detunings:
     delta_2={detunings[2] * 1e-6 / (2*PI):.2f} MHz""")
 
 # --- atomic cloud ---
-cloud_radii  = [120e-6, 43e-6, 43e-6]   # 1-sigma position widths [m]
-temperatures = [6.5e-6, 6.5e-6, 2.5e-6]   # thermal widths [K]
+cloud_radii  = [0e-6, 0e-6, 0e-6]   # 1-sigma position widths [m]
+temperatures = [0e-6, 0e-6, 0e-6]   # thermal widths [K]
 # --- beam waists ---
 w0_689       = 0.54e-3       # 689 nm 1/e^2 radius [m]
 w0_688       = 0.90e-3       # 688 nm 1/e^2 radius [m]
@@ -86,11 +86,11 @@ w0_679       = 0.90e-3       # 679 nm 1/e^2 radius [m]
 beam_radii = np.array([w0_689, w0_688, w0_679])
 
 # --- simulation ---
-T_MAX   = 5e-6
+T_MAX   = 3e-6
 dt      = 50e-9
-N_atoms = 100
+N_atoms = 1
 t_push = 0.8e-6
-n_shots = 20
+n_shots = 10
 # --- misc params ---
 ep      = {'t0': 0.0, 'sigma': 90e-9}
 envelope='ERF'
@@ -188,3 +188,6 @@ elif mode == "FREQ":
 
 else:
     print("Set mode to 'TIME' or 'FREQ'.")
+
+
+# %%
