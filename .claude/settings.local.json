@@ -8,7 +8,8 @@
       "Bash(conda env:*)",
       "Bash(python -c \":*)",
       "Bash(python -c \"import qutip; print\\(qutip.__version__\\)\")",
-      "Bash(python one_photon_dynamics.py)"
+      "Bash(python one_photon_dynamics.py)",
+      "Bash(python Simulations/wavefront_limits.py)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Erik\\Desktop\\Kasevich Lab\\Plots\\Sequential3v_Figures"

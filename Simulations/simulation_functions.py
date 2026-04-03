@@ -1257,8 +1257,11 @@ def simulate_three_photon_rabi_dynamics_new(
         shot_matrices.append((L_stat, L_td, rho0_b, N_s))
 
     # parallelise shots with joblib
-    pop_list = _Parallel_new(n_jobs=n_jobs)(
-        _delayed_new(_run_one_shot_new)(    
+    # prefer="threads" avoids broken-process-pool errors in interactive
+    # environments (VS Code, Jupyter) on Windows; numpy/scipy release the GIL
+    # so thread-based parallelism still gives real speedup.
+    pop_list = _Parallel_new(n_jobs=n_jobs, prefer="threads")(
+        _delayed_new(_run_one_shot_new)(
             t_pulse, L_stat, L_td, rho0_b, N_s, envelope, t0_ep, ep)
         for t_pulse, (L_stat, L_td, rho0_b, N_s)
         in zip(tlist, shot_matrices)

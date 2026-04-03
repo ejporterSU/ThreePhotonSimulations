@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+
 from simulation_functions import *
 
 def pd_mv_to_power(beam, pd_mv):
@@ -49,7 +50,6 @@ B_field_G = 20
 B_field_T = B_field_G * 1e-4
 delta_zeeman_689 = get_zeeman_detuning(G_J_3P1, mJ_targets[0], B_field_T)
 
-
 # --- laser powers ---
 # via PD
 P_689        = pd_mv_to_power("689", 85)   # 689 nm peak power [W]
@@ -90,7 +90,7 @@ T_MAX   = 3e-6
 dt      = 50e-9
 N_atoms = 1
 t_push = 0.8e-6
-n_shots = 10
+n_shots = 40
 # --- misc params ---
 ep      = {'t0': 0.0, 'sigma': 90e-9}
 envelope='ERF'
