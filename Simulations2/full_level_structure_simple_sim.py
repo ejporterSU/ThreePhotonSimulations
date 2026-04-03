@@ -3,16 +3,6 @@
 Sr-88 three-photon excitation: 1S0 -> 3P1(mJ=+1) -> 3S1(mJ=0) -> 3P0
 Basic QuTiP Lindblad master equation structure.
 
-State ordering:
-|0> = 1S0            (ground)
-|1> = 3P1, mJ=-1     (intermediate 1, driven by 689 nm sigma-)
-|2> = 3P1, mJ=0      (intermediate 1, driven by 689 nm pi)
-|3> = 3P1, mJ=+1     (intermediate 1, driven by 688 nm sigma+)
-|4> = 3S1, mJ=-1     (intermediate 2, driven by 688 nm sigma-)
-|5> = 3S1, mJ=0      (intermediate 2, driven by 688 nm pi)
-|6> = 3S1, mJ=+1     (intermediate 2, driven by 688 nm simga+)
-|7> = 3P0            (clock state)
-|8> = 3P2, all mJ    (dark decay channel 3P2)
 
 """
 
@@ -103,37 +93,15 @@ Is_688 = Ipref * gamma_688 / (lambda_688**3) * 100  # [uW/cm^2]
 Is_679 = Ipref * gamma_679 / (lambda_679**3) * 100  # [uW/cm^2]
 
 
-
-# ── Sr-88 transition parameters ───────────────────────────────────────────── #
-# state lifetimes
-tau_3p1 = 21.3e-6 # 21us lifetime
-tau_3s1 = 13.9e-9 # 13.9ns lifetime
-
-#inf lifetimes
-tau_1s0 = np.inf
-tau_3p0 = np.inf
-tau_3p2 = np.inf
-#endregion
-
 # ── Basis states ──────────────────────────────────────────────────────────── #
 #region
 N  = 9
 g = qt.basis(N, 0)   # |1S0>
+e = qt.basis(N, 1)   # |3P1, mJ=+1>
+v = qt.basis(N, 2)   # |3S1, mJ=0>
+r = qt.basis(N, 3)   # |3P0>
 
-e1 = qt.basis(N, 1)   # |3P1, mJ=-1>
-e2 = qt.basis(N, 2)   # |3P1, mJ=0>
-e3 = qt.basis(N, 3)   # |3P1, mJ=+1>
-e_manifold = np.array([e1, e2, e3])
-
-v1 = qt.basis(N, 4)   # |3S1, mJ=-1>
-v2 = qt.basis(N, 5)   # |3S1, mJ=0>
-v3 = qt.basis(N, 6)   # |3S1, mJ=+1>
-v_manifold = np.array([v1, v2, v3])
-
-r = qt.basis(N, 7)   # |3P0>
-ds = qt.basis(N, 8)   # |3P2, mJ=all> dark state decay channel
-
-states = [g, e1, e2, e3, v1, v2, v3, r, ds]
+states = [g, e, v, r]
 projs = [state * state.dag() for state in states]
 #endregion
 
@@ -176,7 +144,7 @@ Omega_679 = gamma_679 * np.sqrt(I_679/(2*Is_679))     # 679 nm:  3S1  <-> 3P0
 B_field_G = 20
 B_field_T = B_field_G * 1e-4
 dwB_3p1= get_zeeman_detuning(G_J_3P1, B_field_T)
-dwB_3s1= get_zeeman_detuning(G_J_3S1, B_field_T)
+
 
 # print(f"{dwB_3p1 / (2*PI *1e6):.2f}, MHz Zeeman Shift")
 
@@ -221,24 +189,15 @@ MODE='TIME'
 
 if MODE=='TIME':
     H_diag = (
-        - (Delta_1 + dwB_3p1           )  * projs[1]
-        - (Delta_1                     )  * projs[2]
-        - (Delta_1 - dwB_3p1           )  * projs[3]
-        - (Delta_1 + Delta_2 + dwB_3s1 )  * projs[4]
-        - (Delta_1 + Delta_2           )  * projs[5]
-        - (Delta_1 + Delta_2 - dwB_3s1 )  * projs[6]
-        - (Delta_1 + Delta_2 - Delta_3 )  * projs[7]  
+        - (Delta_1 - dwB_3p1           )  * projs[1]
+        - (Delta_1 + Delta_2           )  * projs[2]
+        - (Delta_1 + Delta_2 - Delta_3 )  * projs[3]  
     )
-    # Coherent couplings (Omega/2 for each laser field)
-    H_689 = Omega_689/2 * (couplings_689[-1] * (e1 * g.dag() + g * e1.dag()) + 
-                        couplings_689[+1] * (e3 * g.dag() + g * e3.dag()) )
+   
 
-    H_688 = Omega_688/2 * (couplings_688[+1] * (e1 * v2.dag() + v2 * e1.dag()) + 
-                            couplings_688[-1] * (e2 * v1.dag() + v1 * e2.dag()) +
-                            couplings_688[+1] * (e2 * v3.dag() + v3 * e2.dag()) + 
-                            couplings_688[-1] * (e3 * v2.dag() + v2 * e3.dag()) )
-
-    H_679 = Omega_679/2 * (couplings_679[0] * (v2 * r.dag() + r * v2.dag()))
+    H_689 = Omega_689/2 * (couplings_689[+1] * (e * g.dag() + g * e.dag()) )
+    H_688 = Omega_688/2 * ( couplings_688[-1] * (e * v.dag() + v * e.dag()) )
+    H_679 = Omega_679/2 * (couplings_679[0] * (v * r.dag() + r * v.dag()))
 
 
     H_coupling = H_688 + H_679 + H_689
@@ -248,20 +207,10 @@ if MODE=='TIME':
         H = H_diag + H_coupling
 
     # ── Collapse operators (Lindblad spontaneous emission) ────────────────────── #
-    c_3P1_to_1S0 = [np.sqrt(gamma_689) * (g * e1.dag()),
-                    np.sqrt(gamma_689) * (g * e2.dag()),
-                    np.sqrt(gamma_689) * (g * e3.dag()) ]
-    c_3S1_to_3P1 = [np.sqrt(gamma_688/2) * (e2 * v1.dag()), np.sqrt(gamma_688/2) * (e1 * v1.dag()),
-                    np.sqrt(gamma_688/2) * (e1 * v2.dag()), np.sqrt(gamma_688/2) * (e3 * v2.dag()),
-                    np.sqrt(gamma_688/2) * (e3 * v3.dag()), np.sqrt(gamma_688/2) * (e2 * v3.dag()), ]
-    c_3S1_to_3P0 = [np.sqrt(gamma_679) * (r * v1.dag()), 
-                    np.sqrt(gamma_679) * (r * v2.dag()),
-                    np.sqrt(gamma_679) * (r * v3.dag())]
-    c_3S1_to_3P2 = [np.sqrt(gamma_707) * (ds * v1.dag()), 
-                    np.sqrt(gamma_707) * (ds * v2.dag()),
-                    np.sqrt(gamma_707) * (ds * v3.dag())]
-
-    c_ops = c_3P1_to_1S0 + c_3S1_to_3P1 + c_3S1_to_3P0 + c_3S1_to_3P2
+    c_3P1_to_1S0 = [np.sqrt(gamma_689) * (g * e.dag())]
+    c_3S1_to_3P1 = [np.sqrt(gamma_688) * (e * v.dag())]
+    c_3S1_to_3P0 = [np.sqrt(gamma_679) * (r * v.dag())]
+    c_ops = c_3P1_to_1S0 + c_3S1_to_3P1 + c_3S1_to_3P0 
 
 
     # ── Initial state ─────────────────────────────────────────────────────────── #
@@ -271,13 +220,12 @@ if MODE=='TIME':
 
 
     result = qt.mesolve(H, rho0, tlist, c_ops, e_ops=projs)
-    pops   = result.expect   # [pop_1S0, pop_3P1, pop_3S1, pop_3P0]
-
+    pops   = result.expect   
 
     # ── Plot ──────────────────────────────────────────────────────────────────── #
     fig, ax = plt.subplots(figsize=(8, 4))
-    labels = ['g', 'em1', 'e0', 'e1', 'vm1', 'v0', 'v1', 'r', 'ds']
-    colors = [f'C{i}' for i in range(9)]
+    labels = ['g', 'e','v', 'r']
+    colors = [f'C{i}' for i in range(4)]
     for pop, label, color in zip(pops, labels, colors):
         ax.plot(tlist * 1e6, pop, color=color, label=f"{label} {max(np.abs(pop)):.3f}")
 
@@ -295,24 +243,14 @@ if MODE=='FREQ':
     max_clock = []
     for dac in ac_starks:
         H_diag = (
-            - (Delta_1 + dwB_3p1           )  * projs[1]
-            - (Delta_1                     )  * projs[2]
-            - (Delta_1 - dwB_3p1           )  * projs[3]
-            - (Delta_1 + Delta_2 + dwB_3s1 )  * projs[4]
-            - (Delta_1 + Delta_2           )  * projs[5]
-            - (Delta_1 + Delta_2 - dwB_3s1 )  * projs[6]
-            - (Delta_1 + Delta_2 - (Delta_3 + dac) )  * projs[7]  
+            - (Delta_1 - dwB_3p1           )  * projs[1]
+            - (Delta_1 + Delta_2           )  * projs[2]
+            - (Delta_1 + Delta_2 - (Delta_3 + dac) )  * projs[3]  
         )
         # Coherent couplings (Omega/2 for each laser field)
-        H_689 = Omega_689/2 * (couplings_689[-1] * (e1 * g.dag() + g * e1.dag()) + 
-                            couplings_689[+1] * (e3 * g.dag() + g * e3.dag()) )
-
-        H_688 = Omega_688/2 * (couplings_688[+1] * (e1 * v2.dag() + v2 * e1.dag()) + 
-                                couplings_688[-1] * (e2 * v1.dag() + v1 * e2.dag()) +
-                                couplings_688[+1] * (e2 * v3.dag() + v3 * e2.dag()) + 
-                                couplings_688[-1] * (e3 * v2.dag() + v2 * e3.dag()) )
-
-        H_679 = Omega_679/2 * (couplings_679[0] * (v2 * r.dag() + r * v2.dag()))
+        H_689 = Omega_689/2 * (couplings_689[+1] * (e * g.dag() + g * e.dag()) )
+        H_688 = Omega_688/2 * ( couplings_688[-1] * (e * v2.dag() + v * e.dag()) )
+        H_679 = Omega_679/2 * (couplings_679[0] * (v * r.dag() + r * v.dag()))
 
 
         H_coupling = H_688 + H_679 + H_689
@@ -322,20 +260,10 @@ if MODE=='FREQ':
             H = H_diag + H_coupling
 
         # ── Collapse operators (Lindblad spontaneous emission) ────────────────────── #
-        c_3P1_to_1S0 = [np.sqrt(gamma_689) * (g * e1.dag()),
-                        np.sqrt(gamma_689) * (g * e2.dag()),
-                        np.sqrt(gamma_689) * (g * e3.dag()) ]
-        c_3S1_to_3P1 = [np.sqrt(gamma_688/2) * (e2 * v1.dag()), np.sqrt(gamma_688/2) * (e1 * v1.dag()),
-                        np.sqrt(gamma_688/2) * (e1 * v2.dag()), np.sqrt(gamma_688/2) * (e3 * v2.dag()),
-                        np.sqrt(gamma_688/2) * (e3 * v3.dag()), np.sqrt(gamma_688/2) * (e2 * v3.dag()), ]
-        c_3S1_to_3P0 = [np.sqrt(gamma_679) * (r * v1.dag()), 
-                        np.sqrt(gamma_679) * (r * v2.dag()),
-                        np.sqrt(gamma_679) * (r * v3.dag())]
-        c_3S1_to_3P2 = [np.sqrt(gamma_707) * (ds * v1.dag()), 
-                        np.sqrt(gamma_707) * (ds * v2.dag()),
-                        np.sqrt(gamma_707) * (ds * v3.dag())]
-
-        c_ops = c_3P1_to_1S0 + c_3S1_to_3P1 + c_3S1_to_3P0 + c_3S1_to_3P2
+        c_3P1_to_1S0 = [np.sqrt(gamma_689) * (g * e.dag()) ]
+        c_3S1_to_3P1 = [np.sqrt(gamma_688) * (e * v.dag())]
+        c_3S1_to_3P0 = [np.sqrt(gamma_679) * (r * v.dag())]
+        c_ops = c_3P1_to_1S0 + c_3S1_to_3P1 + c_3S1_to_3P0 
 
 
         # ── Initial state ─────────────────────────────────────────────────────────── #
@@ -344,8 +272,9 @@ if MODE=='FREQ':
         # ── Time evolution ────────────────────────────────────────────────────────── #
 
 
-        result = qt.mesolve(H, rho0, tlist, c_ops, e_ops=projs[7])
-        pops   = result.expect   # [pop_1S0, pop_3P1, pop_3S1, pop_3P0]
+
+        result = qt.mesolve(H, rho0, tlist, c_ops, e_ops=projs[-1])
+        pops   = result.expect
         max_clock.append(max(pops[0]))
 
     plt.plot(ac_starks / (2*PI*1e6), max_clock)
@@ -353,11 +282,3 @@ if MODE=='FREQ':
     plt.ylabel("Max Population")
 
 
-
-
-
-
-
-
-
-# %%
