@@ -5,12 +5,19 @@ from scipy.optimize import curve_fit
 from matplotlib import patheffects
 import matplotlib.patches as patches
 from matplotlib.gridspec import GridSpec
+
+
 import sys
 from pathlib import Path
-import os
+direc = Path.cwd().resolve()
+while direc.name != "ThreePhotonSimulations":
+    direc = direc.parent
+    
+_DATA_DIR = direc / "Data"
+_FIGURE_DIR = direc / "Figure Code"
+sys.path.insert(0, str(_DATA_DIR))
+sys.path.insert(0, str(_FIGURE_DIR))
 from fig_style import *
-
-_DATA_DIR = Path(__file__).parent.parent / 'Data'
 
 
 # ── Figure-specific marker shapes ─────────────────────────────────────────────

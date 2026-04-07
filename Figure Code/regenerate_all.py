@@ -15,15 +15,13 @@ from fig_style import save_figure
 from figure1 import make_figure as make_fig1
 from figure2 import make_figure as make_fig2
 from figure3 import make_figure as make_fig3
-from figure4 import make_figure as make_fig4, VERTICAL
+from figure4 import make_figure as make_fig4
 
 figures = [
-    ('fig1',                     make_fig1,  {}),
-    ('fig2',                     make_fig2,  {}),
-    ('fig3',                     make_fig3,  {}),
-    ('fig4v', make_fig4, {'vertical': True}),
-    ('fig4h', make_fig4, {'vertical': False})
-    
+    ('fig1',  make_fig1,  {}),
+    ('fig2',  make_fig2,  {}),
+    ('fig3',  make_fig3,  {}),
+    ('fig4',  make_fig4,  {})
 ]
 
 for stem, fn, kwargs in figures:
