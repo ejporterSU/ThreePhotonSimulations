@@ -6,19 +6,21 @@ from matplotlib.transforms import ScaledTranslation
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 import os
+import json
+_DATA_DIR = "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Data"
+_FIGURE_DIR = "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Figure Code"
+os.chdir(_FIGURE_DIR)
 from fig_style import *
-_DATA_DIR = Path(__file__).parent.parent / 'Data'
 
-from fig_style import *
 
-# ── Figure-specific configuration ─────────────────────────────────────────────
-VERTICAL = False
+
 
 # Phase scan config
-scan_times   = [10e-6, 500e-6, 2e-3]
-scan_labels  = [r'$T = 10\ \mu$s', r'$T = 500\ \mu$s', r'$T = 2$ ms']
+scan_times   = [10e-6, 1000e-6, 3000e-6]
+scan_labels  = [r'$T = 10\ \mu$s', r'$T = 1000\ \mu$s', r'$T = 3000$ ms']
 scan_colors  = ["#167E29", "#5D2BF5", "#FF6B35"]
 scan_markers = ['o', 's', '^']
+fname_base = "phase_contrast_040226_"
 
 # ── Physics models ─────────────────────────────────────────────────────────────
 tau_1 = 3.5e-6
@@ -27,30 +29,40 @@ c0_1  = 0.82
 c0_3  = 0.65
 
 
-def contrast_decay(t, c0, tau):
-    return c0 * np.exp(-(t / tau) ** 2)
+
+def contrast_decay(t, c0, sigma):
+    return c0 * np.exp(-(t / sigma) ** 2)
 
 
 def fringe(phi, A, phi_0, offset):
-    return offset + A * np.cos(phi + phi_0)
+    return A * np.sin(phi + phi_0) + offset
 
 
-def make_figure(vertical=VERTICAL):
+def make_figure(vertical=False):
     # ── Contrast decay data ────────────────────────────────────────────────────
-    t_1 = np.logspace(-6, -4.5, 1000)
-    t_3 = np.logspace(-6, -1.8, 1000)
+    t_1_plot = np.logspace(-6, -5, 1000)
+    t_1_data = []
+    c_1_data = []
 
-    np.random.seed(42)
-    t_1_data = np.logspace(-6, -5, 10)
-    t_3_data = np.logspace(-4, -2.5, 10)
+    t_3_plot = np.logspace(-6, -2, 1000)
+    t_3_data = np.array([10, 100, 1000, 2000, 3000]) * 1e-6
+    c_3_data = []
+    
+    for t_3 in t_3_data:
+        fpath = f"{_DATA_DIR}/{fname_base}{round(t_3*1e6)}us.json"
+        with open(fpath) as f:
+            data = json.load(f)
+        c_3_data.append(np.abs(data["batman_popt"][-1]))
+    c_3_data = np.array(c_3_data)
 
-    c_1 = contrast_decay(t_1, c0_1, tau_1)
-    c_3 = contrast_decay(t_3, c0_3, tau_3)
-    c_1_data = contrast_decay(t_1_data, c0_1, tau_1) + np.random.normal(0, 0.005, len(t_1_data))
-    c_3_data = contrast_decay(t_3_data, c0_3, tau_3) + np.random.normal(0, 0.01, len(t_3_data))
+    # fit contrast decay
+    # c_1_popt, _ = curve_fit(contrast_decay, t_1_data, c_1_data)
+    # c_1_fit = contrast_decay(t_1_plot, *c_1_popt)
+    c_3_popt, _ = curve_fit(contrast_decay, t_3_data, c_3_data, p0=[max(c_3_data), t_3_data[-1]])
+    c_3_fit = contrast_decay(t_3_plot, *c_3_popt)
 
-    sens_1 = c_1 * (t_1 * 1e6)
-    sens_3 = c_3 * (t_3 * 1e6)
+    # sens_1 = c_1_fit * (t_1_plot * 1e6)
+    sens_3 = c_3_fit * (t_3_plot * 1e6)
 
     # ── Figure layout ──────────────────────────────────────────────────────────
     if vertical:
@@ -74,36 +86,32 @@ def make_figure(vertical=VERTICAL):
     phase_axes = [ax_p1, ax_p2, ax_p3]
 
     # ── Phase scan panels ──────────────────────────────────────────────────────
-    phi_nominal = np.linspace(0, 4 * np.pi, 250)
-    phi_fit     = np.linspace(0, 4 * np.pi, 500)
-    phase_noise_std = 0.5
-    rng = np.random.default_rng(7)
+
 
     KDE_WIDTH = 1.5
     X_RIGHT   = 4 * np.pi + 0.3
     X_LIM     = X_RIGHT + KDE_WIDTH + 0.2
-
+    phi_fit = np.linspace(0, 4*np.pi, 1000)
     for i, (axi, t_scan, lbl, col, mkr) in enumerate(
             zip(phase_axes, scan_times, scan_labels, scan_colors, scan_markers)):
+        fpath = f"{_DATA_DIR}/{fname_base}{int(t_scan*1e6)}us.json"
+        with open(fpath) as f:
+            data = json.load(f)
 
-        C = contrast_decay(t_scan, c0_3, tau_3)
-        phi_0_true = 0.25 + i * 0.15
+        phase = data["phases"]
+        P_data = data["xc_avg"]
+        P_std = data["xc_std"]
+        popt = data["sine_popt"]
+        popt2 = data["batman_popt"]
 
-        delta_phi = rng.normal(0, phase_noise_std, len(phi_nominal))
-        P_data = fringe(phi_nominal + delta_phi, C / 2, phi_0_true, 0.5) \
-                 + rng.normal(0, 0.015, len(phi_nominal))
-        P_data = np.clip(P_data, 0, 1)
 
-        p0 = [C / 2, phi_0_true, 0.5]
-        popt, _ = curve_fit(fringe, phi_nominal, P_data, p0=p0,
-                            bounds=([0, -np.pi, 0], [0.6, np.pi, 1]))
         P_fit = fringe(phi_fit, *popt)
 
-        axi.plot(phi_nominal, P_data, mkr, color=col,
+        axi.errorbar(phase, P_data, P_std, fmt=mkr, color=col,
                  markersize=4.5, markeredgecolor='black', markeredgewidth=0.5, zorder=3)
         axi.plot(phi_fit, P_fit, '--', color='black', linewidth=LW_FIT, zorder=5)
 
-        kde = gaussian_kde(P_data, bw_method=0.3)
+        kde = gaussian_kde(data["xc"], bw_method=0.3)
         y_grid = np.linspace(-0.1, 1.1, 300)
         density = kde(y_grid)
         density_scaled = X_RIGHT + (density / density.max()) * KDE_WIDTH
@@ -113,9 +121,10 @@ def make_figure(vertical=VERTICAL):
         axi.plot(density_scaled, y_grid,
                  color=col, linewidth=1.0, alpha=0.7, zorder=2)
 
-        A_fit, _, offset_fit = popt
-        y_max = offset_fit + A_fit
-        y_min = offset_fit - A_fit
+
+        y_max = popt2[1] + popt2[2]/2
+        y_min = popt2[1] - popt2[2]/2
+        ## this discrepency between histogram and density is giving offset but can resolve later
         if i == 0:
             # Double-headed arrow spanning y_min → y_max, labeled C, placed within the hlines
             x_arr = X_RIGHT + 0.17
@@ -166,41 +175,34 @@ def make_figure(vertical=VERTICAL):
     add_panel_label(ax, 'b)')
 
     # ── Right panel: Contrast decay ────────────────────────────────────────────
-    ax.plot(t_1 * 1e6, c_1, color=COLOR_1V, linewidth=LW_MAIN, zorder=3)
-    ax.plot(t_3 * 1e6, c_3, color=COLOR_3V, linewidth=LW_MAIN, zorder=3)
-    ax.plot(t_1_data * 1e6, c_1_data, 'o', color=COLOR_1V,
-            markeredgecolor='white', markeredgewidth=0.8, markersize=MARKER_L, zorder=4, label='1-photon')
-    ax.plot(t_3_data * 1e6, c_3_data, 's', color=COLOR_3V,
-            markeredgecolor='white', markeredgewidth=0.8, markersize=MARKER_L, zorder=4, label='3-photon (sim.)')
+    
+    # ax.scatter(t_1_data * 1e6, c_1_data, s=60, marker='o', color=COLOR_1V,
+    #         ec='white', linewidth=1, zorder=4, label='1-photon')
+    # ax.plot(t_1 * 1e6, c_1, color=COLOR_1V, linewidth=LW_MAIN, zorder=3)
+    ax.scatter(t_3_data * 1e6, c_3_data, s=60, marker='s', color=COLOR_3V,
+            ec='white', linewidth=1, zorder=4, label='3-photon')
+    ax.plot(t_3_plot * 1e6, c_3_fit, color=COLOR_3V, linewidth=LW_MAIN, zorder=3)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlabel(r'Ramsey delay $T$ ($\mu$s)', fontsize=FS_LABEL)
     ax.set_ylabel('Contrast', fontsize=FS_LABEL, labelpad=2)
-    ax.set_xlim(0.7, 2e4)
+    ax.set_xlim(0.7, 4e4)
     ax.set_ylim(4e-3, 3)
     ax.set_xticks([1, 10, 100, 1000, 10000])
     ax.set_xticklabels(['1', '10', '100', r'$10^3$', r'$10^4$'], fontsize=FS_TICK)
+
     ax.set_yticks([1e-2, 0.1, 1])
     ax.set_yticklabels(['0.01', '0.1', '1'], fontsize=FS_TICK)
     ax.legend(frameon=False, fontsize=FS_TICK, loc='upper left',
               handlelength=1.5, handletextpad=0.5)
 
-    # # Enhancement arrow
-
-    # y_arrow = 0.03
-    # ax.annotate('', xy=(4e3, y_arrow), xytext=(5.5, y_arrow),
-    #             arrowprops=dict(arrowstyle='<->, head_width=0.5, head_length=1',
-    #                             color='black', lw=3),
-    #             zorder=6)
-    # ax.text(130, y_arrow * 1.1, r'$\sim$1000$\times$ Enhancement',
-    #         ha='center', va='bottom', fontsize=10, fontweight='bold', color='black', zorder=6)
-
     # ── Twin axis: Sensitivity C·T ─────────────────────────────────────────────
     ax2 = ax.twinx()
-    max_sens1 = max(sens_1)
-    ax2.plot(t_1 * 1e6, sens_1/max_sens1, '--', color=COLOR_1V_LIGHT, linewidth=LW_AUX, zorder=2)
-    ax2.plot(t_3 * 1e6, sens_3/max_sens1, '--', color=COLOR_3V_LIGHT, linewidth=LW_AUX, zorder=2)
+    # max_sens1 = max(sens_1)
+    max_sens1=1
+    # ax2.plot(t_1 * 1e6, sens_1/max_sens1, '--', color=COLOR_1V_LIGHT, linewidth=LW_AUX, zorder=2)
+    ax2.plot(t_3_plot * 1e6, sens_3/max_sens1, '--', color=COLOR_3V_LIGHT, linewidth=LW_AUX, zorder=2)
     ax2.set_yscale('log')
     ax2.set_ylim(0.1, 2e3)
     ax2.set_ylabel(r'Relative Sensitivity  $\propto C \cdot T$  ($\mu$s)',
@@ -213,6 +215,7 @@ def make_figure(vertical=VERTICAL):
     
 
     ax2.axhline(max(sens_3/max_sens1), xmin=0.6, xmax=0.85, linestyle=':', color='black', lw=2)
+    print(max(sens_3/max_sens1))
     ax2.text(0.5 + 0.45/2, 0.88, "~1000x Enhancement", fontsize=10, 
              transform=ax2.transAxes, ha='center')
     return fig

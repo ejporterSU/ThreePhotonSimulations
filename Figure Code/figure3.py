@@ -3,13 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from pathlib import Path
-from fig_style import *
 import os
-from fig_style import *
-from pdf2image import convert_from_path
-_DATA_DIR = Path(__file__).parent.parent / 'Data'
-_FIGURE_DIR = Path(__file__).parent.parent / 'Figure Code'
 
+
+from pdf2image import convert_from_path
+_DATA_DIR = "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Data"
+_FIGURE_DIR = "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Figure Code"
+os.chdir(_FIGURE_DIR)
+from fig_style import *
 
 def load_pdf_as_array(pdf_path, dpi=600):
     """Rasterize first page of a PDF and return as a numpy array."""
@@ -29,7 +30,7 @@ def make_figure():
     ax_p2 = fig.add_subplot(gs[1])
 
     # ── Sequence image ─────────────────────────────────────────────────────────
-    img = load_pdf_as_array(_FIGURE_DIR / 'doppler_erasing.pdf')
+    img = load_pdf_as_array(_FIGURE_DIR + '/doppler_erasing.pdf')
     ax_img.imshow(img)
     ax_img.axis('off')
 
@@ -41,13 +42,13 @@ def make_figure():
 
     # ──  data ──────────────────────────────────────────────────────────────
     #region
-    data_1 = np.loadtxt(str(_DATA_DIR / 'seq_pi2.csv'), delimiter=',')
+    data_1 = np.loadtxt(_DATA_DIR + '/seq_pi2.csv', delimiter=',')
     t_raw_1 = data_1[0,:]
     pop_1s0_1 = data_1[1,:]
     pop_3p1_1 = data_1[2,:]
     pop_3p0_1= data_1[3,:]
 
-    data_2 = np.loadtxt(str(_DATA_DIR / 'seq_pi.csv'), delimiter=',')
+    data_2 = np.loadtxt(_DATA_DIR + '/seq_pi_040226.csv', delimiter=',')
     t_raw_2 = data_2[0,:]
     pop_1s0_2 = data_2[1,:]
     pop_3p1_2 = data_2[2,:]
@@ -107,7 +108,7 @@ def make_figure():
                    arrowprops=dict(arrowstyle='<->, head_width=0.5, head_length=1',
                                    color='black', lw=2),
                    zorder=6)
-    ax_p2.text(0.6, 0.5, r'94.6%',
+    ax_p2.text(0.6, 0.5, r'95.4%',
                ha='right', va='bottom', fontsize=10, fontweight='bold',
                color='black', zorder=6)
 
