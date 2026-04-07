@@ -8,7 +8,10 @@
 \definecolor{blochpink}{RGB}{220,150,150}
 \definecolor{blochred}{RGB}{200,80,80}
 % border and panel colors
+\definecolor{panelbg1}{RGB}{255,255,255}
 \definecolor{panelbg}{RGB}{240,240,240}
+\definecolor{panelbg2}{RGB}{215,215,215}
+
 \definecolor{panelborder}{RGB}{0,80,120}
 % atomic cloud colors
 \definecolor{atomblue}{RGB}{100,160,220}
@@ -53,7 +56,7 @@
 % ============================================================
 \begin{scope}[shift={(0,0)}]
   % Background
-  \fill[panelbg, rounded corners=3pt] (0,0) rectangle ++(\boxwidtha, \boxheight);
+  \fill[panelbg1, rounded corners=3pt] (0,0) rectangle ++(\boxwidtha, \boxheight);
   \draw[panelborder, thick, rounded corners=3pt] (0,0) rectangle ++(\boxwidtha, \boxheight);
   \node[above, font=\bfseries] at (\boxwidtha/2, \boxheight) {State Prep};
   % Title
@@ -68,8 +71,8 @@
     % \draw[gray, dotted, thin] (0,0.5) ellipse (1.1 and 0.3);
     % \draw[gray, dotted, thin] (0,-0.5) ellipse (1.1 and 0.3);
     % % State labels
-    \node[above left] at (-\sphrad/4,\sphrad) {$|{}^3\text{P}_1\rangle$};
-    \node[below] at (0,-1.5) {$|{}^1\text{S}_0\rangle$};
+    \node[above] at (0,1.25) {$|{}^3\text{P}_1\rangle$};
+    \node[below] at (0,-1.25) {$|{}^1\text{S}_0\rangle$};
     % Arrow pointing to south pole
     \draw[->,thick] (0,0) -- (0,-\sphrad);
     \fill (0,-\sphrad) circle (2pt);
@@ -78,7 +81,7 @@
   \draw[ultra thick, black, ->, font=\Large] (-0.1, -0.4) -- +(16, 0) node[ below=10, left] {Time};
   \draw[thick, font=\Large] (5.2, -0.4 + 0.1) -- ++(0, -0.2) node[below] {$t_a$};
   \draw[thick, font=\Large] (11.2, -0.4 + 0.1) -- ++(0, -0.2) node[below] {$t_b$};
-  \node[black, font=\Large] at (8, -1.6) {$\Phi  = \boxed{\vec{k}\cdot(\vec{x}_0 + \vec{v}t_a) + \phi_a - \omega_e(t_b-t_a)} \boxed{-\vec{k}\cdot(\vec{x}_0+\vec{v} t_b) + \phi_b}$};
+  \node[black, font=\Large] at (8, -1.6) {$\Phi  = \boxed{\vec{k}\cdot(\vec{r}_0 + \vec{v}t_a) + \phi_a - \omega_e(t_b-t_a)} \boxed{-\vec{k}\cdot(\vec{r}_0+\vec{v} t_b) + \phi_b}$};
   \draw[->, gray, ultra thick] (7, -1.2) -- ++(0, 1.2);
   \draw[->, gray, ultra thick] (12, -1.2) -- ++(0, 1.2);
 
@@ -103,8 +106,8 @@
     \draw[gray, dashed, thin] (0,0) ellipse (1.3 and 0.4);
 
     % % State labels
-    \node[above left] at (-\sphrad/4,\sphrad) {$|{}^3\text{P}_1\rangle$};
-    \node[below] at (0,-1.5) {$|{}^1\text{S}_0\rangle$};
+        \node[above] at (0,1.25) {$|{}^3\text{P}_1\rangle$};
+    \node[below] at (0,-1.25) {$|{}^1\text{S}_0\rangle$};
 
     \draw[->,thick] (0,0) -- (-\sphrad*0.5,-\sphrad*0.25);
     \fill[gray!20!black,semitransparent] (-\sphrad*0.5,-\sphrad*0.25) circle (7pt);
@@ -137,7 +140,7 @@
 % ============================================================
 \begin{scope}[shift={(\boxgap*2+\boxwidtha+\boxwidthb,0)}]
   % Background
-  \fill[panelbg, rounded corners=3pt] (0,0) rectangle ++(\boxwidthc, \boxheight);
+  \fill[panelbg2, rounded corners=3pt] (0,0) rectangle ++(\boxwidthc, \boxheight);
   \draw[panelborder, thick, rounded corners=3pt] (0,0) rectangle ++(\boxwidthc, \boxheight);
   \node[above, font=\bfseries] at (\boxwidthc/2, \boxheight) {Sequential Pulse 2};
   % Title
@@ -153,8 +156,8 @@
     \draw[gray, dashed, thin] (0,0) ellipse (\sphrad*0.85 and 0.3);
 
     % % State labels
-    \node[above left] at (-\sphrad/4,\sphrad) {$|{}^3\text{P}_0\rangle$};
-    \node[below] at (0,-1.5) {$|{}^1\text{S}_0\rangle$};
+        \node[above] at (0,1.25) {$|{}^3\text{P}_0\rangle$};
+    \node[below] at (0,-1.25) {$|{}^1\text{S}_0\rangle$};
 
     \draw[->,thick] (0,0) -- (+\sphrad*0.45,-\sphrad*0.25);
     \fill[gray!20!black,semitransparent] (+\sphrad*0.45,-\sphrad*0.25) circle (7pt);
@@ -207,14 +210,13 @@
   \shade[atom red, font=\large]  (1.0 + \boxwidthb + \boxgap+ \boxwidtha,1.5)  circle (\circrad);
   \shade[atom blue] (1.0 + \boxwidthb + \boxgap+ \boxwidtha,0) circle (\circrad);
   \draw[<-, ultra thick, red] (1.0 + \boxwidthb + \boxgap+ \boxwidtha,1.5) -- ++(0.75,0.3);
-  \node[font=\large, rotate=5] at (1.0 + \boxwidthb + \boxgap+ \boxwidtha -0.3,1.5 +1) {$\vec{k}_R = -\vec{k}_1$};
+  \node[font=\large, rotate=0] at (1.0 + \boxwidthb + \boxgap+ \boxwidtha -0.3,1.5 +1) {$\vec{k}_R = -\vec{k}_1$};
   
   
   \shade[atom blue] (1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha,0) circle (\circrad);
   \shade[atom blue glow] (1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha,0) circle (\circrad*1.7);
   \shade[atom red, font=\large] (1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha,1.5) circle (\circrad);
 
-  \node[font=\large, rotate=5] at (1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha ,1.5 + 1) {$|{}^1\text{S}_0\rangle + e^{i\Phi}|{}^3\text{P}_0\rangle$} ;
   \shade[atom red glow] (1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha,1.5)  circle (\circrad*1.7);
 
   \draw[<->, gray, ultra thick](1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha,0) -- (1.0 + \boxwidthb*1.5 + \boxgap+ \boxwidtha,1.5);
