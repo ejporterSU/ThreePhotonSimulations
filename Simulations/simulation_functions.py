@@ -588,11 +588,11 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
 
             H_det  = -d0 * proj[1] - d01 * proj[2] - d012 * proj[3]
             H_sys  = H_det + O0 * H_01 + O1 * H_12 + O2 * H_23
+
             result = qt.mesolve(H_sys, rho0, tlist, c_ops, e_ops=e_ops)
             avg_populations += np.array(result.expect)   # shape (4, n_steps)
 
         return tlist, avg_populations / N_atoms
-
     # ------------------------------------------------------------------ #
     # SHAPED: shot-by-shot scan over pulse durations                      #
     # ------------------------------------------------------------------ #
@@ -648,7 +648,10 @@ def simulate_three_photon_rabi_dynamics(positions, velocities, beam_radii,
             O2   = par_i['beam_2']['Omega'][j]
 
             H_det = -d0 * proj[1] - d01 * proj[2] - d012 * proj[3]
-            
+            if i == len(tlist)-1:
+                f, _ = erf_rabi_envelope(t0, sigma_ep, t_pulse, Omega_peak=1)
+                plt.plot(tlist*1e6, f(tlist))
+                plt.show()
 
             if envelope == 'ERF':
                 sigma_ep = ep.get('sigma', 90e-9)
