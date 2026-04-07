@@ -5,11 +5,18 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.transforms import ScaledTranslation
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
-import os
+
 import json
-_DATA_DIR = "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Data"
-_FIGURE_DIR = "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Figure Code"
-os.chdir(_FIGURE_DIR)
+import sys
+from pathlib import Path
+direc = Path.cwd().resolve()
+while direc.name != "ThreePhotonSimulations":
+    direc = direc.parent
+    
+_DATA_DIR = direc / "Data"
+_FIGURE_DIR = direc / "Figure Code"
+sys.path.insert(0, str(_DATA_DIR))
+sys.path.insert(0, str(_FIGURE_DIR))
 from fig_style import *
 
 
@@ -38,7 +45,7 @@ def fringe(phi, A, phi_0, offset):
     return A * np.sin(phi + phi_0) + offset
 
 
-def make_figure(vertical=False):
+def make_figure():
     # ── Contrast decay data ────────────────────────────────────────────────────
     t_1_plot = np.logspace(-6, -5, 1000)
     t_1_data = []
@@ -65,23 +72,14 @@ def make_figure(vertical=False):
     sens_3 = c_3_fit * (t_3_plot * 1e6)
 
     # ── Figure layout ──────────────────────────────────────────────────────────
-    if vertical:
-        fig = plt.figure(figsize=(6.5, 9))
-        gs_outer = GridSpec(2, 1, height_ratios=[3, 2.2], hspace=0.35,
-                            left=0.13, right=0.87, top=0.95, bottom=0.08)
-        gs_inner = GridSpecFromSubplotSpec(3, 1, subplot_spec=gs_outer[0], hspace=0.0)
-        ax_p1 = fig.add_subplot(gs_inner[0])
-        ax_p2 = fig.add_subplot(gs_inner[1], sharex=ax_p1)
-        ax_p3 = fig.add_subplot(gs_inner[2], sharex=ax_p1)
-        ax    = fig.add_subplot(gs_outer[1])
-    else:
-        fig = plt.figure(figsize=(11, 4.5))
-        gs = GridSpec(3, 2, width_ratios=[2.5, 1.8], wspace=0.25, hspace=0.03,
-                      left=0.07, right=0.96, top=0.93, bottom=0.13)
-        ax_p1 = fig.add_subplot(gs[0, 0])
-        ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
-        ax_p3 = fig.add_subplot(gs[2, 0], sharex=ax_p1)
-        ax    = fig.add_subplot(gs[:, 1])
+
+    fig = plt.figure(figsize=(11, 4.5))
+    gs = GridSpec(3, 2, width_ratios=[2.5, 1.8], wspace=0.25, hspace=0.03,
+                    left=0.07, right=0.96, top=0.93, bottom=0.13)
+    ax_p1 = fig.add_subplot(gs[0, 0])
+    ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
+    ax_p3 = fig.add_subplot(gs[2, 0], sharex=ax_p1)
+    ax    = fig.add_subplot(gs[:, 1])
 
     phase_axes = [ax_p1, ax_p2, ax_p3]
 
@@ -170,7 +168,7 @@ def make_figure(vertical=False):
             axi.set_xlabel('Phase (rad)', fontsize=FS_LABEL)
 
     # ── Panel corner labels ────────────────────────────────────────────────────
-    lx = -0.13 if vertical else -0.18
+    lx = -0.18
     add_panel_label(ax_p1, 'a)', x=lx)
     add_panel_label(ax, 'b)')
 
@@ -215,7 +213,7 @@ def make_figure(vertical=False):
     
 
     ax2.axhline(max(sens_3/max_sens1), xmin=0.6, xmax=0.85, linestyle=':', color='black', lw=2)
-    print(max(sens_3/max_sens1))
+
     ax2.text(0.5 + 0.45/2, 0.88, "~1000x Enhancement", fontsize=10, 
              transform=ax2.transAxes, ha='center')
     return fig
@@ -223,6 +221,5 @@ def make_figure(vertical=False):
 
 if __name__ == '__main__':
     fig = make_figure()
-    suffix = "v" if VERTICAL else "h"
-    save_figure(fig, f'fig4{suffix}')
+    save_figure(fig, f'fig4')
     plt.show()

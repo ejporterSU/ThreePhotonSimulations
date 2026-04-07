@@ -4,18 +4,26 @@ from PIL import Image
 from pdf2image import convert_from_path
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from pathlib import Path
-from fig_style import save_figure, add_panel_label
 
-# ── Figure-specific configuration ─────────────────────────────────────────────
-_DIR = Path(__file__).parent
+import sys
+from pathlib import Path
+direc = Path.cwd().resolve()
+while direc.name != "ThreePhotonSimulations":
+    direc = direc.parent
+    
+_DATA_DIR = direc / "Data"
+_FIGURE_DIR = direc / "Figure Code"
+sys.path.insert(0, str(_DATA_DIR))
+sys.path.insert(0, str(_FIGURE_DIR))
+from fig_style import *
+
 
 DPI_IMPORT = 600   # rasterization resolution for input PDFs
 FIG_WIDTH  = 5.0   # total figure width in inches
 FIG_HEIGHT = 8.0
 PANELS = [
-    {"path": str(_DIR / "energy_diagram.pdf"),    "label": "a)"},
-    {"path": str(_DIR / "three_photon_geom.pdf"), "label": "b)"},
+    {"path": str(_FIGURE_DIR / "energy_diagram.pdf"),    "label": "a)"},
+    {"path": str(_FIGURE_DIR / "three_photon_geom.pdf"), "label": "b)"},
 ]
 
 
