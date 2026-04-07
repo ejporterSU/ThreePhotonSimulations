@@ -21,7 +21,9 @@ figures = [
     ('fig1',                     make_fig1,  {}),
     ('fig2',                     make_fig2,  {}),
     ('fig3',                     make_fig3,  {}),
-    (f'fig4{"v" if VERTICAL else "h"}', make_fig4, {'vertical': VERTICAL}),
+    ('fig4v', make_fig4, {'vertical': True}),
+    ('fig4h', make_fig4, {'vertical': False})
+    
 ]
 
 for stem, fn, kwargs in figures:
