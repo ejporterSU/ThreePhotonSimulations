@@ -2,7 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-
+import os
+print(os.chdir( "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations/Simulations"))
 from simulation_functions import *
 
 def pd_mv_to_power(beam, pd_mv):
@@ -87,7 +88,7 @@ beam_radii = np.array([w0_689, w0_688, w0_679])
 
 # --- simulation ---
 T_MAX   = 3e-6
-dt      = 50e-9
+dt      = 10e-9
 N_atoms = 1
 t_push = 0.8e-6
 n_shots = 40
@@ -110,17 +111,17 @@ if mode == "TIME":
     detunings[2] = detunings[2] + delta_AC
 
     t0 = time.perf_counter()
-    tlist, pops, params = simulate_three_photon_rabi_dynamics_new(
+    tlist, pops = simulate_three_photon_rabi_dynamics(
         pos, vel, beam_radii, powers, detunings, k_vecs,
         pol_vecs, quant_axis, mJ_targets,
         t_max=T_MAX, dt=dt,
         n_shots=n_shots,
         envelope=envelope,
-        envelope_params=ep, n_jobs=-1
+        envelope_params=ep
     )
     print(f"Timing: {time.perf_counter()-t0:.2f} s  "
           f"({n_shots} shots, dt={dt*1e9:.0f} ns, T_MAX={T_MAX*1e6:.1f} µs)")
-    print_simulation_params(params)
+    # print_simulation_params(params)
 
     fig, ax = plt.subplots(figsize=(8, 4))
     state_labels = ['1S0', '3P1', '3P0', '3P2']
