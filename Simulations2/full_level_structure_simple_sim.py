@@ -130,7 +130,7 @@ w0_688       = 0.90e-3       # 688 nm 1/e^2 radius [m]
 w0_679       = 0.90e-3       # 679 nm 1/e^2 radius [m]
 beam_radii = np.array([w0_689, w0_688, w0_679])
 
-P_689        = 12.88e-3             # 689 nm peak power [W]
+P_689        = 18.88e-3             # 689 nm peak power [W]
 P_688        = 4.86e-3             # 688 nm peak power [W] 
 P_679        = 8.77e-3             # 679 nm peak power [W] 
 
@@ -161,14 +161,18 @@ dwB_3s1= get_zeeman_detuning(G_J_3S1, B_field_T)
 
 # Single-photon detunings from each resonance [rad/s] 
 delta_AC = 2*PI * -1.1393e6
-Delta_1 = dwB_3p1 + 2*PI * 5.0e6   # 689 nm detuning from 1S0 -> 3P1
-Delta_2 = 2*PI *  -448e6   # 688 nm detuning from 3P1 -> 3S1
-Delta_3 = 2*PI *  448e6  - Delta_1  # 679 nm detuning from 3S1 -> 3P0
+d1 =  2*PI * 45.0e6   # 689 nm detuning from 1S0 -> 3P1
+d2 = 2*PI *  -445e6   # 688 nm detuning from 3P1 -> 3S1
+d3 = d1 + d2
+
+D1 = d1
+D2 = d1 + d2
+D3 = delta_AC
 
 # ── Drive envelope ────────────────────────────────────────────────────────── #
 # USE_RAMP = True  → erf ramp, reaches ~99% at t ≈ 2*tau_ramp (~200 ns total)
 # USE_RAMP = False → square wave (instant turn-on)
-USE_RAMP  = True
+USE_RAMP  = False
 tau_ramp  = 200e-9   # erf width [s]; rise/fall spans 0→2*tau_ramp on each edge
 T_MAX  = 3e-6   # total time [s]
 dt = 100e-9
@@ -192,13 +196,13 @@ couplings_679 = get_coupling_factor(pol_vecs[2], quant_axis)
 
 
 H_diag = (
-        - (Delta_1 + dwB_3p1           )  * projs[1]
-        - (Delta_1                     )  * projs[2]
-        - (Delta_1 - dwB_3p1           )  * projs[3]
-        - (Delta_1 + Delta_2 + dwB_3s1 )  * projs[4]
-        - (Delta_1 + Delta_2           )  * projs[5]
-        - (Delta_1 + Delta_2 - dwB_3s1 )  * projs[6]
-        - (Delta_1 + Delta_2 + Delta_3 + delta_AC )  * projs[7]  
+        - (D1 + dwB_3p1           )  * projs[1]
+        - (D1                     )  * projs[2]
+        - (D1 - dwB_3p1           )  * projs[3]
+        - (D2 + dwB_3s1 )  * projs[4]
+        - (D2           )  * projs[5]
+        - (D2 - dwB_3s1 )  * projs[6]
+        - (D3 )  * projs[7]  
     )   
 
 
@@ -214,16 +218,9 @@ H_688 = Omega_688/2 * (couplings_688[+1] * (e1 * v2.dag() + v2 * e1.dag()) +
 H_679 = Omega_679/2 * (couplings_679[0] * (v2 * r.dag() + r * v2.dag()))
 
 
-def get_AC_stark(omega1, dwb, omega3, delta1, delta3):
-    delta1 = np.abs(delta1)
+def get_AC_stark(d1, d2, d3, o1, o2, o3, dwb1, dwb2):
+
     delta3 = np.abs(delta3)
-    # Ground state shift from 689 (blue detuned from both mJ=±1 sublevels):
-    #   Each sublevel has coupling factor 1/sqrt(2) (z-pol ⊥ quant axis),
-    #   so Omega_eff^2 = (1/sqrt(2))^2 * omega1^2 = omega1^2/2
-    #   delta_g = omega1^2/2 * delta1/(4*(delta1^2 - dwb^2)/2)... simplified:
-    #   delta_g = +omega1^2 * delta1 / (4*(delta1^2 - dwb^2))
-    # Clock state shift from 679 (|3P0> is BELOW |3S1>, so shift is negative):
-    #   delta_r = -omega3^2 / (4*delta3)
     delta_g = omega1**2 * delta1 / (4 * (delta1**2 - dwb**2))
     delta_r = -omega3**2 / (4 * delta3)
     return delta_r - delta_g  # both terms negative
@@ -259,7 +256,7 @@ else:
 rho0 = g*g.dag()   # all population in 1S0
 
 
-MODE='TIME'
+MODE='FREQ'
 
 
 if MODE=='TIME':
@@ -288,14 +285,14 @@ if MODE=='FREQ':
     
     for dac in tqdm(ac_starks, desc='Running AC Stark Sweep...'):
         H_diag = (
-                - (Delta_1 + dwB_3p1           )  * projs[1]
-                - (Delta_1                     )  * projs[2]
-                - (Delta_1 - dwB_3p1           )  * projs[3]
-                - (Delta_1 + Delta_2 + dwB_3s1 )  * projs[4]
-                - (Delta_1 + Delta_2           )  * projs[5]
-                - (Delta_1 + Delta_2 - dwB_3s1 )  * projs[6]
-                - (Delta_1 + Delta_2 + Delta_3 + dac)  * projs[7]
-            )
+            - (D1 + dwB_3p1           )  * projs[1]
+            - (D1                     )  * projs[2]
+            - (D1 - dwB_3p1           )  * projs[3]
+            - (D2 + dwB_3s1 )  * projs[4]
+            - (D2           )  * projs[5]
+            - (D2 - dwB_3s1 )  * projs[6]
+            - (dac )  * projs[7]  
+        )   
         if USE_RAMP:
             H = [H_diag, [H_coupling, drive_envelope]]
         else:
