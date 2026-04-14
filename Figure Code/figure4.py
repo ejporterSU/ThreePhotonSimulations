@@ -27,13 +27,10 @@ scan_times   = [10e-6, 1000e-6, 3000e-6]
 scan_labels  = [r'$T = 10\ \mu$s', r'$T = 1000\ \mu$s', r'$T = 3000$ ms']
 scan_colors  = ["#167E29", "#5D2BF5", "#FF6B35"]
 scan_markers = ['o', 's', '^']
-fname_base = "phase_contrast_040226_"
+fname_base1 = "1v_phase_contrast_040726_"
+fname_base3_sim = "3v_sim_phase_contrast_040726_"
+fname_base3_seq = "3v_seq_phase_contrast_040726_"
 
-# ── Physics models ─────────────────────────────────────────────────────────────
-tau_1 = 3.5e-6
-tau_3 = 2e-3
-c0_1  = 0.82
-c0_3  = 0.65
 
 
 
@@ -48,28 +45,45 @@ def fringe(phi, A, phi_0, offset):
 def make_figure():
     # ── Contrast decay data ────────────────────────────────────────────────────
     t_1_plot = np.logspace(-6, -5, 1000)
-    t_1_data = []
+    t_1_data = 1.2e-6 + np.array([0, 0.5, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 7.5]) * 1e-6
     c_1_data = []
-
-    t_3_plot = np.logspace(-6, -2, 1000)
-    t_3_data = np.array([10, 100, 1000, 2000, 3000]) * 1e-6
-    c_3_data = []
-    
-    for t_3 in t_3_data:
-        fpath = f"{_DATA_DIR}/{fname_base}{round(t_3*1e6)}us.json"
+    for t_1 in t_1_data:
+        fpath = f"{_DATA_DIR}/{fname_base1}{round(t_1*1e6, 1)}us.json"
         with open(fpath) as f:
             data = json.load(f)
-        c_3_data.append(np.abs(data["batman_popt"][-1]))
-    c_3_data = np.array(c_3_data)
+        c_1_data.append(np.abs(data["sine_popt"][0]))
+
+
+    t_3_plot = np.logspace(-6, -2, 1000)
+    t_3_data = np.array([10, 100, 200, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 7000]) * 1e-6
+    c_3_data_sim = []
+    c_3_data_seq = []
+    
+    for t_3 in t_3_data:
+        fpath = f"{_DATA_DIR}/{fname_base3_sim}{round(t_3*1e6, 1)}us.json"
+        with open(fpath) as f:
+            data = json.load(f)
+        c_3_data_sim.append(np.abs(data["batman_popt"][-1]))
+        fpath = f"{_DATA_DIR}/{fname_base3_seq}{round(t_3*1e6, 1)}us.json"
+        with open(fpath) as f:
+            data = json.load(f)
+        c_3_data_seq.append(np.abs(data["batman_popt"][-1]))
+
+    c_3_data_seq = np.array(c_3_data_seq)
+    c_3_data_sim = np.array(c_3_data_sim)
 
     # fit contrast decay
-    # c_1_popt, _ = curve_fit(contrast_decay, t_1_data, c_1_data)
-    # c_1_fit = contrast_decay(t_1_plot, *c_1_popt)
-    c_3_popt, _ = curve_fit(contrast_decay, t_3_data, c_3_data, p0=[max(c_3_data), t_3_data[-1]])
-    c_3_fit = contrast_decay(t_3_plot, *c_3_popt)
+    c_1_popt, _ = curve_fit(contrast_decay, t_1_data, c_1_data, p0=[max(c_1_data), t_1_data[-1]])
+    c_1_fit = contrast_decay(t_1_plot, *c_1_popt)
+    c_3_popt_sim, _ = curve_fit(contrast_decay, t_3_data, c_3_data_sim, p0=[max(c_3_data_sim), t_3_data[-1]])
+    c_3_fit_sim = contrast_decay(t_3_plot, *c_3_popt_sim)
 
-    # sens_1 = c_1_fit * (t_1_plot * 1e6)
-    sens_3 = c_3_fit * (t_3_plot * 1e6)
+    c_3_popt_seq, _ = curve_fit(contrast_decay, t_3_data, c_3_data_seq, p0=[max(c_3_data_seq), t_3_data[-1]])
+    c_3_fit_seq = contrast_decay(t_3_plot, *c_3_popt_seq)
+
+    sens_1 = c_1_fit * (t_1_plot * 1e6)
+    sens_3_sim = c_3_fit_sim * (t_3_plot * 1e6)
+    sens_3_seq = c_3_fit_seq * (t_3_plot * 1e6)
 
     # ── Figure layout ──────────────────────────────────────────────────────────
 
@@ -92,7 +106,7 @@ def make_figure():
     phi_fit = np.linspace(0, 4*np.pi, 1000)
     for i, (axi, t_scan, lbl, col, mkr) in enumerate(
             zip(phase_axes, scan_times, scan_labels, scan_colors, scan_markers)):
-        fpath = f"{_DATA_DIR}/{fname_base}{int(t_scan*1e6)}us.json"
+        fpath = f"{_DATA_DIR}/{fname_base3_sim}{round(t_scan*1e6, 1)}us.json"
         with open(fpath) as f:
             data = json.load(f)
 
@@ -174,12 +188,16 @@ def make_figure():
 
     # ── Right panel: Contrast decay ────────────────────────────────────────────
     
-    # ax.scatter(t_1_data * 1e6, c_1_data, s=60, marker='o', color=COLOR_1V,
-    #         ec='white', linewidth=1, zorder=4, label='1-photon')
-    # ax.plot(t_1 * 1e6, c_1, color=COLOR_1V, linewidth=LW_MAIN, zorder=3)
-    ax.scatter(t_3_data * 1e6, c_3_data, s=60, marker='s', color=COLOR_3V,
-            ec='white', linewidth=1, zorder=4, label='3-photon')
-    ax.plot(t_3_plot * 1e6, c_3_fit, color=COLOR_3V, linewidth=LW_MAIN, zorder=3)
+    ax.scatter(t_1_data * 1e6, c_1_data, s=60, marker='o', color=COLOR_1V,
+            ec='white', linewidth=1, zorder=4, label='1-photon')
+    ax.plot(t_1_plot * 1e6, c_1_fit, color=COLOR_1V, linewidth=LW_MAIN, zorder=3)
+    ax.scatter(t_3_data * 1e6, c_3_data_sim, s=60, marker='s', color=COLOR_3V,
+            ec='white', linewidth=1, zorder=4, label='3-photon (sim.)')
+    ax.plot(t_3_plot * 1e6, c_3_fit_sim, color=COLOR_3V, linewidth=LW_MAIN, zorder=3)
+
+    ax.scatter(t_3_data * 1e6, c_3_data_seq, s=60, marker='s', color='orange',
+            ec='white', linewidth=1, zorder=4, label='3-photon (seq.)')
+    ax.plot(t_3_plot * 1e6, c_3_fit_seq, color='orange', linewidth=LW_MAIN, zorder=3)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
@@ -197,10 +215,12 @@ def make_figure():
 
     # ── Twin axis: Sensitivity C·T ─────────────────────────────────────────────
     ax2 = ax.twinx()
-    # max_sens1 = max(sens_1)
-    max_sens1=1
-    # ax2.plot(t_1 * 1e6, sens_1/max_sens1, '--', color=COLOR_1V_LIGHT, linewidth=LW_AUX, zorder=2)
-    ax2.plot(t_3_plot * 1e6, sens_3/max_sens1, '--', color=COLOR_3V_LIGHT, linewidth=LW_AUX, zorder=2)
+    max_sens1 = max(sens_1)
+
+    ax2.plot(t_1_plot * 1e6, sens_1/max_sens1, '--', color=COLOR_1V_LIGHT, linewidth=LW_AUX, zorder=2)
+    ax2.plot(t_3_plot * 1e6, sens_3_sim/max_sens1, '--', color=COLOR_3V_LIGHT, linewidth=LW_AUX, zorder=2)
+    ax2.plot(t_3_plot * 1e6, sens_3_seq/max_sens1, '--', color='orange', linewidth=LW_AUX, zorder=2)
+
     ax2.set_yscale('log')
     ax2.set_ylim(0.1, 2e3)
     ax2.set_ylabel(r'Relative Sensitivity  $\propto C \cdot T$  ($\mu$s)',
@@ -212,10 +232,10 @@ def make_figure():
                         fontsize=FS_TICK, color='gray')
     
 
-    ax2.axhline(max(sens_3/max_sens1), xmin=0.6, xmax=0.85, linestyle=':', color='black', lw=2)
+    ax2.axhline(max(sens_3_sim/max_sens1), xmin=0.6, xmax=0.85, linestyle=':', color='black', lw=2)
 
-    ax2.text(0.5 + 0.45/2, 0.88, "~1000x Enhancement", fontsize=10, 
-             transform=ax2.transAxes, ha='center')
+    # ax2.text(0.5 + 0.45/2, 0.88, "~1000x Enhancement", fontsize=10, 
+    #          transform=ax2.transAxes, ha='center')
     return fig
 
 
