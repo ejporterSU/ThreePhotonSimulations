@@ -16,12 +16,13 @@ eps  = 1e-15  # numerical floor
 # ─── Beam parameters ──────────────────────────────────────────────────────────
 # (0,1,2) indices -> 689, 688, 679
 lambs = np.array([689.4489, 688.020770, 679.288943]) * 1e-9  # [m]
-w0s   = np.array([0.5,      0.9,        0.9       ]) * 1e-3  # waist radii [m]
+w0s   = np.array([0.9,      0.9,        0.9       ]) * 1e-3  # waist radii [m]
 ks    = 2*PI / lambs
 Zrs   = PI * w0s**2 / lambs  # Rayleigh ranges [m]
 signs = np.array([+1, +1, -1])
 
 print("Rayleigh ranges (m):", Zrs)
+
 
 # Propagation directions (azimuthal theta, elevation theta_z)
 # All beams in the x-y plane (theta_z = 0), so z is transverse to all beams.
@@ -40,13 +41,16 @@ k_hats = np.array([
     get_k_hat(theta_2, theta_2z),  # 679
 ])
 
+
 # Verify plane-wave net k_eff ≈ 0 (angles chosen for this)
 k_pw = sum(signs[i] * ks[i] * k_hats[i] for i in range(3))
 print(f"Plane-wave net |k_eff| = {np.linalg.norm(k_pw):.4f} rad/m  (target: 0)")
 
-#%%
 
-def gaussian_local_kvec(r, k, Zr, k_hat):
+
+
+
+def gaussian_local_kvec(r, k, Zr, k_hat, show_comp=False):
     """
     Local wavevector of a Gaussian beam at a single position.
 
@@ -66,30 +70,28 @@ def gaussian_local_kvec(r, k, Zr, k_hat):
     (3,) array  – local wavevector [rad/m]
     """
     # Decompose r into axial and transverse beam-frame components
+
     z_b   = np.dot(r, k_hat)          # axial coordinate
     if abs(z_b) < eps: z_b = eps
     r_par = z_b * k_hat               # parallel component
     r_perp = r - r_par                # transverse vector
     rho   = np.linalg.norm(r_perp)    # transverse distance
 
+
     # Transverse unit vector (safe at rho=0)
     rho_hat = r_perp / rho if rho > eps else np.zeros(3)
 
-    # 1/R(z_b) = z_b / (z_b^2 + Zr^2)  — stable everywhere
-    denom    = z_b**2 + Zr**2
-    Rz   = z_b*(1+(Zr/z_b)**2)
-
-    # d(1/R)/dz = (Zr^2 - z_b^2) / (z_b^2 + Zr^2)^2
-    d_inv_Rz = (Zr**2 - z_b**2) / denom**2
-
     # Gouy phase: d/dz[-arctan(z/Zr)] = -Zr/(z_b^2+Zr^2)
-    gouy_kz  = -Zr / denom
-
+    gouy_kz  = -Zr / (z_b**2 + Zr**2)
     # Axial and transverse components of local k
-    k_axial = k + (k * rho**2 / 2) * d_inv_Rz + gouy_kz
-    k_trans = k * rho / Rz
+    k_axial = k + (k * rho**2 / 2) * (Zr**2 - z_b**2) / (z_b**2 + Zr**2)**2 + gouy_kz
 
-    return k_axial * k_hat + k_trans * rho_hat
+    Rz   = z_b*(1+(Zr/z_b)**2)
+    k_trans = k * rho / Rz
+    if show_comp: # return components individually
+        return [(1, (k * rho**2 / 2) * (Zr**2 - z_b**2) / (z_b**2 + Zr**2)**2/k, gouy_kz/k, k_hat), (k_trans/k, rho_hat)]
+    else:
+        return k_axial * k_hat + k_trans * rho_hat
 
 
 def residual_kvec(r):
@@ -97,6 +99,16 @@ def residual_kvec(r):
     return sum(signs[i] * gaussian_local_kvec(r, ks[i], Zrs[i], k_hats[i])
                for i in range(3))
 
+
+
+tot = np.zeros(3)
+for i in range(3):
+    tot += signs[i]*gaussian_local_kvec([500e-6,500e-6,500e-6], ks[i], Zrs[i], k_hats[i])
+print(tot / np.sum(ks))
+
+
+
+#%%
 
 # ─── Compute heatmaps at three z-slices ───────────────────────────────────────
 # Subtract k_eff at origin so heatmaps show the Gaussian wavefront variation.
