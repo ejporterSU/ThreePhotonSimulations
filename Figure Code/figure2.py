@@ -154,28 +154,29 @@ def make_figure():
     ax1.set_xlabel('Rabi Frequency (kHz)', fontsize=FS_LABEL)
     ax1.set_ylabel('Linewidth (kHz)', fontsize=FS_LABEL)
     ax1.set_xlim(0.05, 3e3)
-    ax1.set_ylim(0.1, 2e4)
+    ax1.set_ylim(0.1, 2e3)
     ax1.set_xscale('log')
     ax1.set_yscale('log')
     ax1.set_xticks([0.1, 1, 10, 1e2, 1e3])
     ax1.set_xticklabels([0.1, 1, 10, r'$10^2$', r'$10^3$'])
-    ax1.set_yticks([1, 10, 1e2, 1e3, 1e4])
-    ax1.set_yticklabels([1, 10, r'$10^2$', r'$10^3$', r'$10^4$'])
+    ax1.set_yticks([1, 10, 1e2, 1e3])
+    ax1.set_yticklabels([1, 10, r'$10^2$', r'$10^3$'])
     ax1.tick_params(axis='both', direction='in', which='both', width=TICK_WIDTH)
-    ax1.legend(loc='lower right', fontsize=10, frameon=False, handlelength=2.5, handletextpad=0.2)
+    ax1.legend(loc='upper left', fontsize=10, frameon=False, handlelength=2.5, handletextpad=0.2)
 
     rect = patches.Rectangle((4.6, 5), 5, 170, linewidth=1.5, edgecolor='k', facecolor='none')
     ax1.add_patch(rect)
     ax1.plot([2, 7], [1e3, 178], c='k', lw=1.5, solid_capstyle='round')
 
     # Inset: frequency scans
-    axins = ax1.inset_axes([0.05, 0.67, 0.3, 0.3])
+    axins = ax1.inset_axes([0.575, 0.125, 0.4, 0.4])
     axins.scatter(f_1v_shifted, y_1v_norm, marker=MARKER_1V, color=COLOR_1V, alpha=0.7, s=12)
     axins.plot(f_fine, y_1v_fit, color=COLOR_1V, linewidth=1, linestyle=':')
     axins.scatter(f_3v_shifted, y_3v_norm, marker=MARKER_3V, color=COLOR_3V, alpha=0.7, s=12)
     axins.plot(f_fine, y_3v_fit, color=COLOR_3V, linewidth=1, linestyle=':')
     axins.set_yticks([])
     axins.set_xlabel(r'$\Delta\nu$ (kHz)', fontsize=8, labelpad=0)
+    axins.set_ylabel(r'Population (norm.)', fontsize=8, labelpad=0)
     axins.tick_params(axis='x', labelsize=8)
     axins.set_xlim(-90, 90)
     axins.set_ylim(-0.1, 1.2)
@@ -188,35 +189,36 @@ def make_figure():
     # ── Panel (b): Rabi flopping ───────────────────────────────────────────────
     ax2.plot(t_data, 0.1*t_data/10, linestyle='--', color=COLOR_3P2)
     ax2.plot(t_data, 0.05*t_data/10, linestyle='--', color=COLOR_3P1)
-    ax2.plot(t_data, (0.5 + 0.5*np.cos(2*np.pi * t_data/6))*np.exp(-t_data/35), linestyle='--', color=COLOR_1S0)
+    #ax2.plot(t_data, (0.5 + 0.5*np.cos(2*np.pi * t_data/6))*np.exp(-t_data/35), linestyle='--', color=COLOR_1S0)
     ax2.plot(t_data, (0.5 - 0.5*np.cos(2*np.pi * t_data/6))*np.exp(-t_data/35), linestyle='--', color=COLOR_3P0)
-
-    ax2.scatter(t_data, pop_1S0_data, s=MARKER_S, marker='s', ec='k', color=COLOR_1S0)
-    ax2.scatter(t_data, pop_3P0_data, s=MARKER_S, marker='^', ec='k', color=COLOR_3P0)
-    ax2.scatter(t_data, pop_3P1_data, s=35, marker='o', ec='k', color=COLOR_3P1, alpha=0.8)
+    ax2.plot(t_data, (0.5 - 0.5*np.cos(2*np.pi * t_data*0.2)), linestyle='--', color='black')
+    
+    #ax2.scatter(t_data, pop_1S0_data, s=MARKER_S, marker='s', ec='k', color=COLOR_1S0)
+    ax2.scatter(t_data, pop_3P0_data, s=MARKER_S, marker='s', ec='k', color=COLOR_3P0)
+    ax2.scatter(t_data, pop_3P1_data, s=35, marker='^', ec='k', color=COLOR_3P1, alpha=0.8)
     ax2.scatter(t_data, pop_3P2_data, s=35, marker='*', ec='k', color=COLOR_3P2, alpha=0.8)
 
-    ax2.plot([], [], marker='s', linestyle='--', label=r'$^1S_0$', color=COLOR_1S0,
+    #ax2.plot([], [], marker='s', linestyle='--', label=r'$^1S_0$', color=COLOR_1S0,
+    #         markeredgewidth=0.8, markeredgecolor='black', markersize=9)
+    ax2.plot([], [], marker='s', linestyle='--', label=r'$^3P_0$', color=COLOR_3P0,
              markeredgewidth=0.8, markeredgecolor='black', markersize=9)
-    ax2.plot([], [], marker='^', linestyle='--', label=r'$^3P_0$', color=COLOR_3P0,
-             markeredgewidth=0.8, markeredgecolor='black', markersize=9)
-    ax2.plot([], [], marker='o', linestyle='--', label=r'$^3P_1$', color=COLOR_3P1,
+    ax2.plot([], [], marker='^', linestyle='--', label=r'$^3P_1$', color=COLOR_3P1,
              markeredgewidth=0.8, markeredgecolor='black', markersize=9)
     ax2.plot([], [], marker='*', linestyle='--', label=r'$^3P_2$', color=COLOR_3P2,
              markeredgewidth=0.8, markeredgecolor='black', markersize=9)
 
-    ax2.set_xlabel(r'Pulse Duration ($\mu$s)', fontsize=FS_LABEL)
+    ax2.set_xlabel(r'Pulse duration ($\mu$s)', fontsize=FS_LABEL)
     ax2.set_ylabel('Population', fontsize=FS_LABEL)
     ax2.set_xlim(0 - 0.25, max(t_data) + 0.25)
     ax2.set_ylim(-0.05, 1.05)
     ax2.tick_params(axis='both', direction='in', which='both', width=TICK_WIDTH)
-    ax2.legend(loc='upper right', fontsize=10, frameon=False, ncol=2,
+    ax2.legend(loc='upper right', fontsize=10, frameon=False, ncol=1,
                columnspacing=0.5, handlelength=3, handletextpad=0.25)
 
     # Inset: atom cloud image
     img = plt.imread(str(_DATA_DIR / 'cloud_image.png'))
-    width=0.11
-    height = 0.35
+    width=0.1
+    height = 0.45
     for i in range(2):
         axins_img = ax2.inset_axes([0.015 + width*i, 0.63, width, height])
         axins_img.set_xticks([])
@@ -236,3 +238,5 @@ if __name__ == '__main__':
     fig = make_figure()
     save_figure(fig, 'fig2')
     plt.show()
+
+# %%
