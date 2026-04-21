@@ -19,7 +19,7 @@
 % =======================================================
 
 % Level line half-widths
-\def\lw{0.65}
+\def\lw{0.55}
 
 % Zeeman sublevel vertical splitting
 \def\dz{0.3}
@@ -110,10 +110,10 @@
 \draw[thick] (\xPz-\lw,         \yPz)      -- (\xPz+\lw,         \yPz);       % m_j =  0
 \draw[thick] (\xPz-\lw+\offset, \yPz-\dz)  -- (\xPz+\lw+\offset, \yPz-\dz);  % m_j = -1
 % detuning marker on m_j = +delta
-\draw[thick, dashed]
+\draw[thick, densely dashed]
   (\xPz-\lw-\offset, \yPz+\dz+\detune) -- (\xPz+\lw-\offset, \yPz+\dz+\detune);
 \draw[<->, >=stealth, font=\small]
-  (\xPz+\lw-\offset, \yPz+\dz) -- (\xPz+\lw-\offset, \yPz+\dz+\detune)
+  (\xPz- \offset+\lw + 0.05, \yPz) -- (\xPz- \offset+\lw + 0.05, \yPz+\dz+\detune)
   node[midway, right] {$\Delta_1$};
 
 % zeeman
@@ -121,7 +121,7 @@
 (\xPz-\lw-\offset, \yPz) -- (\xPz+\lw+\offset, \yPz);
 \draw[<->, >=stealth, font=\small]
 (\xPz-\lw+\offset, \yPz) -- (\xPz-\lw+\offset , \yPz-\dz)
-node[midway, right] {$\delta\omega_B$};
+node[midway, left] {$\delta_B$};
 
 
 % --- 3S1 (three Zeeman sublevels: m_j = +1, 0, -1) ---
@@ -132,7 +132,7 @@ node[midway, right] {$\delta\omega_B$};
 \draw[thick, dashed]
   (\xSo-\lw, \ySo+\detune) -- (\xSo+\lw, \ySo+\detune);
 \draw[<->, >=stealth, font=\small]
-  (\xSo+\lw, \ySo) -- (\xSo+\lw, \ySo+\detune)
+  (\xSo+\lw , \ySo) -- (\xSo+\lw, \ySo+\detune)
   node[midway, right] {$\Delta_2$};
 
 
@@ -143,17 +143,17 @@ node[midway, right] {$\delta\omega_B$};
 % Omega_1: 1S0 -> 3P1 (m_j = +1, detuned)
 \draw[arrow, c689, font=\small]
   (\xGnd, \yGnd) -- (\xPz-\offset, \yPz+\dz+\detune)
-  node[midway, left] {$\Omega_1,\; \vec{k}_1$};
+  node[midway, left] {$\Omega_1, \mathbf{k}_1$};
 
 % Omega_2: 3P1 (m_j = +1) -> 3S1 (m_j = 0, detuned)
 \draw[arrow, c688, font=\small]
   (\xPz-\offset, \yPz+\dz+\detune) -- (\xSo, \ySo+\detune)
-  node[midway, above left] {$\Omega_2,\; \vec{k}_2$};
+  node[midway, above left] {$\Omega_2,\mathbf{k}_2$};
 
 % Omega_3: 3S1 (m_j = 0) -> 3P0 (detuned)
 \draw[arrow, c679, font=\small]
   (\xSo, \ySo+\detune) -- (\xPo, \yPo-\detune)
-  node[midway,  right] {$\Omega_3,\; \vec{k}_3$};
+  node[midway,  right] {$\Omega_3, \mathbf{k}_3$};
 
 
 
@@ -164,22 +164,22 @@ node[midway, right] {$\delta\omega_B$};
 
 
 %% version1
-\draw[rounded corners=3pt, gray!30, line width=1.2pt,
-      fill=gray!5, draw=gray!40]
-  (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + 0.3);
+% \draw[rounded corners=3pt, gray!30, line width=1.2pt,
+%       fill=gray!5, draw=gray!40]
+%   (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + 0.3);
 
-\draw[rounded corners=3pt, gray!30, line width=1.2pt,
-    fill=gray!5, draw=gray!40]
-(-\lw - \offset, \ySo+\mjoff) rectangle ++(2*\offset + 2*\lw, 0.8);
+% \draw[rounded corners=3pt, gray!30, line width=1.2pt,
+%     fill=gray!5, draw=gray!40]
+% (-\lw - \offset, \ySo+\mjoff) rectangle ++(2*\offset + 2*\lw, 0.8);
 
 % % version3
-% \draw[gray!5, line width=0pt,
-%       fill=gray!15, draw=gray!15]
-%   (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + \mjoff);
+\draw[gray!5, line width=0pt,
+      fill=gray!15, draw=gray!15]
+  (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + \mjoff);
 
-% \draw[blue!5, line width=0pt,
-%     fill=gray!15, draw=gray!15]
-% (\xGnd+\lboff - 0.3, \ySo+\mjoff) rectangle (\lw + \offset, \ySo+\mjoff + 0.8);
+\draw[blue!5, line width=0pt,
+    fill=gray!15, draw=gray!15]
+(\xGnd+\lboff - 0.3, \ySo+\mjoff) rectangle (\lw + \offset, \ySo+\mjoff + 0.8);
 
 
 % % version4
