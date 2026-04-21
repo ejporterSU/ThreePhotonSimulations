@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.transforms import ScaledTranslation
 from scipy.optimize import curve_fit
-from scipy.stats import gaussian_kde
 
 import json
 import sys
@@ -23,14 +22,18 @@ from fig_style import *
 
 
 # Phase scan config
-scan_times   = [10e-6, 1000e-6, 3000e-6]
+scan_times   = [10, 1000, 3000]
 scan_labels  = [r'$T = 10\ \mu$s', r'$T = 1000\ \mu$s', r'$T = 3000$ ms']
 scan_colors  = ["#167E29", "#5D2BF5", "#FF6B35"]
 scan_markers = ['o', 's', '^']
-fname_base1 = "1v_phase_contrast_040726_"
-fname_base3_sim = "3v_sim_phase_contrast_040726_"
-fname_base3_seq = "3v_seq_phase_contrast_040726_"
-
+# fname_base1 = "1v_phase_contrast_040726_"
+# fname_base3_sim = "3v_sim_phase_contrast_040726_"
+# fname_base3_seq = "3v_seq_phase_contrast_040726_"
+fname_base1 = "ramsey_contrast_1.txt"
+fname_base3a = "ramsey_contrast_3a.txt"
+fname_base3b = "ramsey_contrast_3b.txt"
+fname_base_hist = "phase_contrast_040726_"
+fname_base3se = "ramsey_contrast_3se.txt"
 
 
 
@@ -39,56 +42,74 @@ def contrast_decay(t, c0, sigma):
 
 
 def fringe(phi, A, phi_0, offset):
-    return A * np.sin(phi + phi_0) + offset
+    return -A * np.sin(phi + phi_0) + offset
+
+
+def batman(x, n, P0, C):
+    return n / np.sqrt(1 - ((P0 - x) / (C / 2)) ** 2)
 
 
 def make_figure():
     # ── Contrast decay data ────────────────────────────────────────────────────
-    t_1_plot = np.logspace(-6, -5, 1000)
-    t_1_data = 1.2e-6 + np.array([0, 0.5, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 7.5]) * 1e-6
-    c_1_data = []
-    for t_1 in t_1_data:
-        fpath = f"{_DATA_DIR}/{fname_base1}{round(t_1*1e6, 1)}us.json"
-        with open(fpath) as f:
-            data = json.load(f)
-        c_1_data.append(np.abs(data["sine_popt"][0]))
 
+    # one photon
+    t_1_plot = np.logspace(-6, -5, 1000) * 1e6
+    fpath1 = f"{_DATA_DIR}/{fname_base1}"
+    with open(fpath1) as f:
+        data = np.loadtxt(fpath1, delimiter=',', skiprows=2)
+    t_1_data = data[:, 0]
+    c_1_data = data[:, 1]
+    c_1_data_error = data[:, 2]
 
-    t_3_plot = np.logspace(-6, -2, 1000)
-    t_3_data = np.array([10, 100, 200, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000, 7000]) * 1e-6
-    c_3_data_sim = []
-    c_3_data_seq = []
+    # 3 photon
+    t_3_plot = np.logspace(-6, -2, 1000)* 1e6
+    #sequential
+    fpath3a = f"{_DATA_DIR}/{fname_base3a}"
+    with open(fpath3a) as f:
+        data = np.loadtxt(fpath3a, delimiter=',', skiprows=2)
+    t_3a_data = data[:, 0]
+    c_3a_data = data[:, 1]
+    c_4a_data_error = data[:, 2]
+
+    # simultaneous
+    fpath3b = f"{_DATA_DIR}/{fname_base3b}"
+    with open(fpath3b) as f:
+        data = np.loadtxt(fpath3b, delimiter=',', skiprows=2)
+    t_3b_data = data[:, 0]
+    c_3b_data = data[:, 1]
+    c_3b_data_error = data[:, 2]
+
+    # spin echo
+    fpath3se = f"{_DATA_DIR}/{fname_base3se}"
+    with open(fpath3se) as f:
+        data = np.loadtxt(fpath3se, delimiter=',', skiprows=2)
+    t_3se_data = data[:, 0]
+    c_3se_data = data[:, 1]
+    c_3se_data_error = data[:, 2]
     
-    for t_3 in t_3_data:
-        fpath = f"{_DATA_DIR}/{fname_base3_sim}{round(t_3*1e6, 1)}us.json"
-        with open(fpath) as f:
-            data = json.load(f)
-        c_3_data_sim.append(np.abs(data["batman_popt"][-1]))
-        fpath = f"{_DATA_DIR}/{fname_base3_seq}{round(t_3*1e6, 1)}us.json"
-        with open(fpath) as f:
-            data = json.load(f)
-        c_3_data_seq.append(np.abs(data["batman_popt"][-1]))
-
-    c_3_data_seq = np.array(c_3_data_seq)
-    c_3_data_sim = np.array(c_3_data_sim)
+ 
 
     # fit contrast decay
     c_1_popt, _ = curve_fit(contrast_decay, t_1_data, c_1_data, p0=[max(c_1_data), t_1_data[-1]])
     c_1_fit = contrast_decay(t_1_plot, *c_1_popt)
-    c_3_popt_sim, _ = curve_fit(contrast_decay, t_3_data, c_3_data_sim, p0=[max(c_3_data_sim), t_3_data[-1]])
-    c_3_fit_sim = contrast_decay(t_3_plot, *c_3_popt_sim)
+    
+    c_3a_popt, _ = curve_fit(contrast_decay, t_3a_data, c_3a_data, p0=[max(c_3a_data), t_3a_data[-1]])
+    c_3a_fit = contrast_decay(t_3_plot, *c_3a_popt)
 
-    c_3_popt_seq, _ = curve_fit(contrast_decay, t_3_data, c_3_data_seq, p0=[max(c_3_data_seq), t_3_data[-1]])
-    c_3_fit_seq = contrast_decay(t_3_plot, *c_3_popt_seq)
+    c_3b_popt, _ = curve_fit(contrast_decay, t_3b_data, c_3b_data, p0=[max(c_3b_data), t_3b_data[-1]])
+    c_3b_fit = contrast_decay(t_3_plot, *c_3b_popt)
+
+    c_3se_popt, _ = curve_fit(contrast_decay, t_3se_data, c_3se_data, p0=[max(c_3se_data), t_3se_data[-1]])
+    c_3se_fit = contrast_decay(t_3_plot, *c_3se_popt)
 
     sens_1 = c_1_fit * (t_1_plot * 1e6)
-    sens_3_sim = c_3_fit_sim * (t_3_plot * 1e6)
-    sens_3_seq = c_3_fit_seq * (t_3_plot * 1e6)
+    sens_3a = c_3a_fit * (t_3_plot * 1e6)
+    sens_3b = c_3b_fit * (t_3_plot * 1e6)
 
     # ── Figure layout ──────────────────────────────────────────────────────────
 
     fig = plt.figure(figsize=(11, 4.5))
-    gs = GridSpec(3, 2, width_ratios=[2.5, 1.8], wspace=0.25, hspace=0.03,
+    gs = GridSpec(3, 2, width_ratios=[2.5, 1.8], wspace=0.45, hspace=0.03,
                     left=0.07, right=0.96, top=0.93, bottom=0.13)
     ax_p1 = fig.add_subplot(gs[0, 0])
     ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
@@ -100,13 +121,10 @@ def make_figure():
     # ── Phase scan panels ──────────────────────────────────────────────────────
 
 
-    KDE_WIDTH = 1.5
-    X_RIGHT   = 4 * np.pi + 0.3
-    X_LIM     = X_RIGHT + KDE_WIDTH + 0.2
     phi_fit = np.linspace(0, 4*np.pi, 1000)
     for i, (axi, t_scan, lbl, col, mkr) in enumerate(
             zip(phase_axes, scan_times, scan_labels, scan_colors, scan_markers)):
-        fpath = f"{_DATA_DIR}/{fname_base3_sim}{round(t_scan*1e6, 1)}us.json"
+        fpath = f"{_DATA_DIR}/{fname_base_hist}{t_scan}us.json"
         with open(fpath) as f:
             data = json.load(f)
 
@@ -115,7 +133,7 @@ def make_figure():
         P_std = data["xc_std"]
         popt = data["sine_popt"]
         popt2 = data["batman_popt"]
-
+        p2p = data["p2p"]
 
         P_fit = fringe(phi_fit, *popt)
 
@@ -123,36 +141,51 @@ def make_figure():
                  markersize=4.5, markeredgecolor='black', markeredgewidth=0.5, zorder=3)
         axi.plot(phi_fit, P_fit, '--', color='black', linewidth=LW_FIT, zorder=5)
 
-        kde = gaussian_kde(data["xc"], bw_method=0.3)
-        y_grid = np.linspace(-0.1, 1.1, 300)
-        density = kde(y_grid)
-        density_scaled = X_RIGHT + (density / density.max()) * KDE_WIDTH
 
-        axi.fill_betweenx(y_grid, X_RIGHT, density_scaled,
-                           color=col, alpha=0.3, zorder=2)
-        axi.plot(density_scaled, y_grid,
-                 color=col, linewidth=1.0, alpha=0.7, zorder=2)
+        counts, bin_edges = np.histogram(data["xc"], bins=25, range=(0,1))
+
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        bin_width = (bin_edges[-1] - bin_edges[0]) / len(counts)
+
+        hist_ax = axi.inset_axes([1.005, 0, 0.18, 1])
+        hist_ax.barh(bin_centers, counts, height=bin_width,
+                     color=col, alpha=0.5, edgecolor='k', linewidth=0.5)
+
+        n_p, P0, C = popt2
+        y_fit = np.linspace(P0 - C / 2, P0 + C / 2, 500)
+        # valid = np.abs(P0 - y_fit) < (C / 2) * 0.995
+        x_fit = np.full_like(y_fit, np.nan)
+        x_fit = batman(y_fit, n_p, P0, C)
+        hist_ax.plot(x_fit, y_fit, color='red', linewidth=0.7)
+
+        hist_ax.set_ylim(-0.1, 1.1)
+        hist_ax.set_xlim(0, max(counts) * 1.1)
+        hist_ax.set_yticks([])
+        hist_ax.set_xticks([])
+        hist_ax.tick_params(axis='x', labelsize=FS_TICK)
+
+        hist_ax.spines[['top', 'right', 'bottom']].set_visible(False)
+
+        # y_max = popt2[1] + popt2[2]/2
+        # y_min = popt2[1] - popt2[2]/2
+        # ## this discrepency between histogram and density is giving offset but can resolve later
+        # if i == 0:
+        #     # Double-headed arrow spanning y_min → y_max, labeled C, placed within the hlines
+        #     x_arr = X_RIGHT + 0.17
+        #     axi.annotate('', xy=(x_arr, y_min), xytext=(x_arr, y_max),
+        #                  arrowprops=dict(arrowstyle='<->', color='black', lw=1.2),
+        #                  zorder=7)
+        #     axi.text(X_RIGHT + 0.35, (y_min + y_max) / 2, r'$C$',
+        #              ha='left', va='center', fontsize=FS_CORNER + 2, color='black', zorder=7)
+
+        # for y_val in [y_min, y_max]:
+        #     axi.hlines(y_val, X_RIGHT, X_RIGHT + 0.3,
+        #                color='black', linewidth=1.2, zorder=5)
+
+        # axi.axvline(X_RIGHT, color='#cccccc', linewidth=0.6, zorder=1)
 
 
-        y_max = popt2[1] + popt2[2]/2
-        y_min = popt2[1] - popt2[2]/2
-        ## this discrepency between histogram and density is giving offset but can resolve later
-        if i == 0:
-            # Double-headed arrow spanning y_min → y_max, labeled C, placed within the hlines
-            x_arr = X_RIGHT + 0.17
-            axi.annotate('', xy=(x_arr, y_min), xytext=(x_arr, y_max),
-                         arrowprops=dict(arrowstyle='<->', color='black', lw=1.2),
-                         zorder=7)
-            axi.text(X_RIGHT + 0.35, (y_min + y_max) / 2, r'$C$',
-                     ha='left', va='center', fontsize=FS_CORNER + 2, color='black', zorder=7)
-
-        for y_val in [y_min, y_max]:
-            axi.hlines(y_val, X_RIGHT, X_RIGHT + 0.3,
-                       color='black', linewidth=1.2, zorder=5)
-
-        axi.axvline(X_RIGHT, color='#cccccc', linewidth=0.6, zorder=1)
-
-        axi.set_xlim(-0.5, X_LIM)
+        axi.set_xlim(-0.5, 4 * np.pi + 0.5)
         axi.set_ylim(-0.1, 1.1)
         axi.set_xticks([0, np.pi, 2 * np.pi, 3 * np.pi, 4 * np.pi])
         axi.set_yticks([0, 0.5, 1])
@@ -160,7 +193,7 @@ def make_figure():
         axi.tick_params(axis='both', labelsize=FS_TICK)
 
         if i == 1:
-            axi.set_ylabel(r'$^3P_0$ Population', fontsize=FS_LABEL)
+            axi.set_ylabel(r'$^1S_0$ Population', fontsize=FS_LABEL)
 
         # Time label with shadow
         shadow_tf = axi.transAxes + ScaledTranslation(1.2 / 72, -1.2 / 72, fig.dpi_scale_trans)
@@ -188,38 +221,46 @@ def make_figure():
 
     # ── Right panel: Contrast decay ────────────────────────────────────────────
     
-    ax.scatter(t_1_data * 1e6, c_1_data, s=60, marker='o', color=COLOR_1V,
-            ec='white', linewidth=1, zorder=4, label='1-photon')
-    ax.plot(t_1_plot * 1e6, c_1_fit, color=COLOR_1V, linewidth=LW_MAIN, zorder=3)
-    ax.scatter(t_3_data * 1e6, c_3_data_sim, s=60, marker='s', color=COLOR_3V,
-            ec='white', linewidth=1, zorder=4, label='3-photon (sim.)')
-    ax.plot(t_3_plot * 1e6, c_3_fit_sim, color=COLOR_3V, linewidth=LW_MAIN, zorder=3)
+    ax.errorbar(t_1_data, c_1_data, yerr=c_1_data_error, fmt='o', color=COLOR_1V,
+                ms=6, mec='white', mew=1, elinewidth=1, capsize=3, zorder=4, label='1-photon')
+    ax.plot(t_1_plot , c_1_fit, color=COLOR_1V, linewidth=LW_MAIN, zorder=3)
 
-    ax.scatter(t_3_data * 1e6, c_3_data_seq, s=60, marker='s', color='orange',
-            ec='white', linewidth=1, zorder=4, label='3-photon (seq.)')
-    ax.plot(t_3_plot * 1e6, c_3_fit_seq, color='orange', linewidth=LW_MAIN, zorder=3)
+    ax.errorbar(t_3a_data, c_3a_data, yerr=c_4a_data_error, fmt='s', color=COLOR_3V,
+                ms=6, mec='white', mew=1, elinewidth=1, capsize=3, zorder=4, label='3-photon (seq.)')
+    ax.plot(t_3_plot, c_3a_fit, color=COLOR_3V, linewidth=LW_MAIN, zorder=3)
+
+    ax.errorbar(t_3b_data, c_3b_data, yerr=c_3b_data_error, fmt='s', color='orange',
+                ms=6, mec='white', mew=1, elinewidth=1, capsize=3, zorder=4, label='3-photon (sim.)')
+    ax.plot(t_3_plot , c_3b_fit, color='orange', linewidth=LW_MAIN, zorder=3)
+
+    ax.errorbar(t_3se_data, c_3se_data, yerr=c_3se_data_error, fmt='^', color='purple',
+                ms=6, mec='white', mew=1, elinewidth=1, capsize=3, zorder=4, label='3-photon (spin echo)')
+    ax.plot(t_3_plot, c_3se_fit, color='purple', linewidth=LW_MAIN, zorder=3)
+
 
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlabel(r'Ramsey delay $T$ ($\mu$s)', fontsize=FS_LABEL)
     ax.set_ylabel('Contrast', fontsize=FS_LABEL, labelpad=2)
     ax.set_xlim(0.7, 4e4)
-    ax.set_ylim(4e-3, 3)
+    ax.set_ylim(4e-3, 2)
     ax.set_xticks([1, 10, 100, 1000, 10000])
     ax.set_xticklabels(['1', '10', '100', r'$10^3$', r'$10^4$'], fontsize=FS_TICK)
 
     ax.set_yticks([1e-2, 0.1, 1])
     ax.set_yticklabels(['0.01', '0.1', '1'], fontsize=FS_TICK)
-    ax.legend(frameon=False, fontsize=FS_TICK, loc='upper left',
-              handlelength=1.5, handletextpad=0.5)
+    legend_pos = (0.55, 0.02)  # (x, y) in axes coordinates
+    ax.legend(frameon=False, fontsize=11,
+              handlelength=1, handletextpad=0.2,
+              loc='lower center', bbox_to_anchor=legend_pos)
 
     # ── Twin axis: Sensitivity C·T ─────────────────────────────────────────────
-    ax2 = ax.twinx()
+    ax2 = ax.twinx()  
     max_sens1 = max(sens_1)
 
-    ax2.plot(t_1_plot * 1e6, sens_1/max_sens1, '--', color=COLOR_1V_LIGHT, linewidth=LW_AUX, zorder=2)
-    ax2.plot(t_3_plot * 1e6, sens_3_sim/max_sens1, '--', color=COLOR_3V_LIGHT, linewidth=LW_AUX, zorder=2)
-    ax2.plot(t_3_plot * 1e6, sens_3_seq/max_sens1, '--', color='orange', linewidth=LW_AUX, zorder=2)
+    ax2.plot(t_1_plot , sens_1/max_sens1, '--', color=COLOR_1V_LIGHT, linewidth=LW_AUX, zorder=2)
+    ax2.plot(t_3_plot , sens_3a/max_sens1, '--', color=COLOR_3V_LIGHT, linewidth=LW_AUX, zorder=2)
+    ax2.plot(t_3_plot , sens_3b/max_sens1, '--', color='orange', linewidth=LW_AUX, zorder=2)
 
     ax2.set_yscale('log')
     ax2.set_ylim(0.1, 2e3)
@@ -232,7 +273,7 @@ def make_figure():
                         fontsize=FS_TICK, color='gray')
     
 
-    ax2.axhline(max(sens_3_sim/max_sens1), xmin=0.6, xmax=0.85, linestyle=':', color='black', lw=2)
+    ax2.axhline(max(np.concatenate([sens_3a, sens_3b]))/max_sens1, xmin=0.6, xmax=0.85, linestyle=':', color='black', lw=2)
 
     # ax2.text(0.5 + 0.45/2, 0.88, "~1000x Enhancement", fontsize=10, 
     #          transform=ax2.transAxes, ha='center')

@@ -3,7 +3,8 @@
 \usepackage{amsmath}
 \usepackage{xcolor}
 \usetikzlibrary{arrows.meta, decorations.pathmorphing, shadings, fadings}
-
+\usetikzlibrary{arrows}
+% \usetikzlibrary{pgfmath}
 \begin{document}
 \begin{tikzpicture}
 
@@ -23,8 +24,8 @@
 \def\arrspace{1}   % gap between atom cloud and arrow start
 
 % Coordinate-axis inset (bottom-left corner)
-\def\ox{-3.5}      % inset origin x
-\def\oy{-4.0}      % inset origin y
+\def\ox{-3.7}      % inset origin x
+\def\oy{-4.2}      % inset origin y
 \def\al{0.8}       % axis arrow length
 
 % Polarization marker size
@@ -71,42 +72,78 @@
 % Atom cloud (center of beam intersection)
 % =======================================================
 
-% Soft outer halo
-\fill[blue!40, opacity=0.15] (0,0) circle (0.8);
-\fill[blue!50, opacity=0.2]  (0,0) circle (0.6);
+% option 1
+% \fill[blue!40, opacity=0.15] (0,0) circle (0.8);
+% \fill[blue!50, opacity=0.2]  (0,0) circle (0.6);
+% \draw[ball color=blue!55!cyan, opacity=0.75] (0,0) circle (0.4);
 
-% Main cloud body
-\shadedraw[ball color=blue!55!cyan, opacity=0.75] (0,0) circle (0.4);
+% option 2
+% \shade[inner color=blue!55, outer color=blue!55, opacity=0.08] (0,0) circle (0.85);
+% \shade[inner color=blue!60, outer color=blue!40, opacity=0.25] (0,0) circle (0.55);
+% \shade[inner color=blue!65, outer color=blue!45, opacity=0.55] (0,0) circle (0.35);
+
+
+%option 3
+% Atom cloud: stippled individual atoms, Gaussian-distributed
+\foreach \r/\op in {%
+  0.95/0.025, 0.85/0.04, 0.75/0.06, 0.65/0.09,
+  0.55/0.12,  0.45/0.15, 0.38/0.18, 0.30/0.20}{
+  \fill[blue!55!cyan, opacity=\op] (0,0) circle (\r);
+}
+
+% Atoms on top
+\begin{scope}
+  \pgfmathsetseed{42}
+  \foreach \i in {1,...,1000}{
+    \pgfmathsetmacro{\x}{0.2*(rnd+rnd+rnd+rnd+rnd+rnd-3)}
+    \pgfmathsetmacro{\y}{0.2*(rnd+rnd+rnd+rnd+rnd+rnd-3)}
+    \pgfmathsetmacro{\op}{0.3+0.5*rnd}
+    \fill[blue!60!black, opacity=\op] (\x,\y) circle (0.015);
+  }
+\end{scope}
+
+%option 4
+% % Atom cloud: layered halos, no specular highlight
+% \fill[blue!50!gray, opacity=0.08] (0,0) circle (0.85);
+% % \fill[blue!55!gray, opacity=0.12] (0,0) circle (0.65);
+% \fill[blue!55!gray, opacity=0.18] (0,0) circle (0.50);
+% \fill[blue!60!gray, opacity=0.28] (0,0) circle (0.38);
+% \fill[blue!65!gray, opacity=0.45] (0,0) circle (0.25);
+% \fill[blue!70!gray, opacity=0.65] (0,0) circle (0.13);
 
 % =======================================================
 % Inter-beam angle arcs
 % =======================================================
-\draw[black, ultra thick, dash pattern=on 8pt off 4pt, font=\Large]
-  (-148:4) arc (-148:-94:4)
-  node[midway, below ] {$\theta_{23}$};
+% \draw[black, ultra thick, dash pattern=on 8pt off 4pt, font=\Large, =>stealth]
+%   (-148:4) arc (-148:-94:4)
+%   node[midway, below ] {$\theta_{23}$};
 
-\draw[black, ultra thick, dash pattern=on 8pt off 4pt, font=\Large]
-  (-86:4.1) arc (-86:-34:4.1)
-  node[midway, below right] {$\theta_{31}$};
+% \draw[black, ultra thick, dash pattern=on 8pt off 4pt, font=\Large]
+%   (-86:4.1) arc (-86:-34:4.1)
+%   node[midway, below right] {$\theta_{31}$};
+
+\draw[->,>=stealth',ultra thick, dash pattern=on 8pt off 4pt, font=\Large] (-93:4) arc[radius=4, start angle=-93, end angle=-148]  node[midway, below ] {$\theta_{23}$} ;
+\draw[->,>=stealth',ultra thick, dash pattern=on 8pt off 4pt, font=\Large] (-87:4) arc[radius=4, start angle=-87, end angle=-32] node[midway, below right] {$\theta_{31}$} ;
+
 
 % =======================================================
 % Polarization markers
 % =======================================================
 
 % Beam 3: linear polarization (double-headed arrow)
-\draw[{Stealth[scale=0.7]}-{Stealth[scale=0.7]}, c679, line width=1.8pt, font=\large]
+\draw[{Stealth[scale=0.7]}-{Stealth[scale=0.7]}, black, line width=1.8pt, font=\large]
   (-\pollen, -\arrspace-\rad-0.15) -- (\pollen, -\arrspace-\rad-0.15)
   node[midway, below] {$\hat{\epsilon}_3$};
 
 % Beam 2: circular polarization (filled dot = into page)
-\draw[c688, line width=0.1pt, fill=c688, font=\large]
+\draw[black, line width=0.1pt, fill=gray!10, font=\large]
   (-150:\arrspace+\rad+0.2) circle (0.1)
   node[above left] {$\hat{\epsilon}_2$};
 \draw[black, line width=0.1pt, fill=black]
   (-150:\arrspace+\rad+0.2) circle (0.02);
 
 % Beam 1: circular polarization (filled dot = into page)
-\draw[c689, line width=0.1pt, fill=c689, font=\large]
+\draw[black, line width=0.1pt, fill=gray!10, font=\large]
   (-30:\arrspace+\rad+0.2) circle (0.1)
   node[above right] {$\hat{\epsilon}_1$};
 \draw[black, line width=0.1pt, fill=black]
@@ -154,7 +191,7 @@
 % =======================================================
 % Inset figure (Doppler-free spectrum)
 % =======================================================
-\node[anchor=north east, inner sep=6pt] at (5.7, 3.3) {
+\node[anchor=north east, inner sep=6pt] at (6.5, 4) {
   \includegraphics[width=4cm]{doppler_free.pdf}
 };
 
