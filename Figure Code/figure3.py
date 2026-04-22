@@ -62,6 +62,10 @@ def make_figure():
     pop_3p0_2= data_2[3,:]
     #endregion
 
+    rabi_color = [230/255, 230/255, 230/255]
+    raman_color = [215/255,215/255,215/255]
+
+
     # ── Method 1 panel ─────────────────────────────────────────────────────────
     ax_p1.set_ylabel('Population', fontsize=FS_LABEL, labelpad=2)
     ax_p1.set_ylim([-0.05, 1.05])
@@ -70,21 +74,24 @@ def make_figure():
     ax_p1.tick_params(axis='both', direction='in', which='both', width=TICK_WIDTH)
 
     ax_p1.scatter(t_raw_1, pop_1s0_1,
-                  s=MARKER_S-10, marker='s', ec='k', color=COLOR_1S0, zorder=6)
+                  s=35, marker='o', ec='k', color=COLOR_1S0, zorder=6)
     ax_p1.scatter(t_raw_1, pop_3p1_1,
-                  s=MARKER_S-10, marker='o', ec='k', color=COLOR_3P1, zorder=6)
+                  s=35, marker='^', ec='k', color=COLOR_3P1, zorder=6)
     ax_p1.scatter(t_raw_1, pop_3p0_1,
-                  s=MARKER_S-10, marker='^', ec='k', color=COLOR_3P0, zorder=6)
+                  s=35, marker='s', ec='k', color=COLOR_3P0, zorder=6)
 
-
-    ax_p1.plot([], [], marker='s', linestyle='--', label=r'$^1S_0$', color=COLOR_1S0,
+    ax_p1.plot([], [], marker='o', linestyle='--', label=r'$^1S_0$', color=COLOR_1S0,
                markeredgewidth=1, markeredgecolor='black', markersize=7)
-    ax_p1.plot([], [], marker='^', linestyle='--', label=r'$^3P_0$', color=COLOR_3P0,
+    ax_p1.plot([], [], marker='s', linestyle='--', label=r'$^3P_0$', color=COLOR_3P0,
                markeredgewidth=1, markeredgecolor='black', markersize=7)
-    ax_p1.plot([], [], marker='o', linestyle='--', label=r'$^3P_1$', color=COLOR_3P1,
+    ax_p1.plot([], [], marker='^', linestyle='--', label=r'$^3P_1$', color=COLOR_3P1,
                markeredgewidth=1, markeredgecolor='black', markersize=7)
     # ax_p1.plot([], [], marker='*', linestyle='--', label=r'$^3P_2$', color=COLOR_3P2,
     #            markeredgewidth=0.8, markeredgecolor='black', markersize=9)
+
+    ax_p1.axvspan(0,0.075, color=rabi_color, alpha=1)
+    ax_p1.axvspan(0.075,0.57, color=raman_color, alpha=1)
+    ax_p1.axvline(x=0.075, color='k', alpha=.5)
 
     tpi2 = 0.06
     # ax_p1.axvspan(-.02, tpi2, facecolor='g', alpha=0.2)
@@ -92,8 +99,8 @@ def make_figure():
     # ax_p1.axvspan(tpi2, 0.64, facecolor='b', alpha=0.2)
 
 
-    ax_p1.legend(loc='upper right', fontsize=10, frameon=False, ncol=1,labelspacing=0.15,
-                 columnspacing=0.5, handlelength=3, handletextpad=0.25)
+    ax_p1.legend(loc='upper right', fontsize=10, frameon=False, ncol=1,labelspacing=0.2,
+                 columnspacing=0.2, handlelength=0, handletextpad=0.5,bbox_to_anchor=(0.9,1.05))
 
     # ── Method 2 panel ─────────────────────────────────────────────────────────
     ax_p2.set_ylabel('Population', fontsize=FS_LABEL, labelpad=2)
@@ -103,17 +110,17 @@ def make_figure():
 
 
     ax_p2.scatter(t_raw_2, pop_1s0_2,
-                  s=MARKER_S-10, marker='s', ec='k', color=COLOR_1S0, zorder=6)
+                  s=35, marker='o', ec='k', color=COLOR_1S0, zorder=6)
     ax_p2.scatter(t_raw_2, pop_3p1_2,
-                  s=MARKER_S-10, marker='o', ec='k', color=COLOR_3P1, zorder=6)
+                  s=35, marker='^', ec='k', color=COLOR_3P1, zorder=6)
     ax_p2.scatter(t_raw_2, pop_3p0_2,
-                  s=MARKER_S-10, marker='^', ec='k', color=COLOR_3P0, zorder=6)
+                  s=35, marker='s', ec='k', color=COLOR_3P0, zorder=6)
 
-    ax_p2.set_xlabel(r'Sequence Duration ($\mu$s)', fontsize=FS_LABEL)
+    ax_p2.set_xlabel(r'Sequence Duration (μs)', fontsize=FS_LABEL)
 
-    ax_p2.annotate('', xy=(0.62, 0), xytext=(0.62, 1),
-                   arrowprops=dict(arrowstyle='<->, head_width=0.5, head_length=1',
-                                   color='black', lw=2),
+    ax_p2.annotate('', xy=(0.605, 0.005), xytext=(0.605, .98),
+                   arrowprops=dict(arrowstyle='<|-|>, head_width=0.2, head_length=.6',
+                                   color='black', lw=.7),
                    zorder=6)
     ax_p2.text(0.6, 0.5, r'95.4%',
                ha='right', va='bottom', fontsize=10, fontweight='bold',
