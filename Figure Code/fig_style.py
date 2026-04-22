@@ -23,8 +23,8 @@ plt.rcParams.update({
 
 COLOR_1S0 = "#5D2BF5"   # ground state
 COLOR_3P0 = "#CC0F0F"   # clock state  (also used as COLOR_3V)
-COLOR_3P1 = "#FF6B35"
-COLOR_3P2 = "#167E29"
+COLOR_3P2 = "#FF6B35"
+COLOR_3P1 = "#167E29"
 
 # ── Colors: 1-photon vs 3-photon comparison ────────────────────────────────────
 COLOR_1V       = "#1845D4"   # 1-photon solid
