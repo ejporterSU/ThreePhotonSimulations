@@ -22,15 +22,15 @@
 \def\rad{2}
 
 % Dashed bounding box dimensions
-\def\boxx{6.5}
-\def\boxy{6.5}
+\def\boxx{7.5}
+\def\boxy{7.5}
 \def\boxvspace{-0.5}   % vertical trim on top edge
 
 % =======================================================
 % Styles
 % =======================================================
 \tikzset{
-  kvec/.style = {ultra thick, ->, >=stealth, line width=3, font=\huge},
+  kvec/.style = {ultra thick, ->, >=stealth, line width=4, font=\Huge},
 }
 
 % =======================================================
@@ -60,11 +60,11 @@
   (-\boxx/2, -\boxy/2) rectangle ++(\boxx, \boxy+\boxvspace);
 
 % Title
-\node[black, above, font=\bfseries\Large]
-  at (0, \boxy/2 - 1.2) {Doppler-Free Condition};
+\node[black, above, font=\bfseries\LARGE]
+  at (0, \boxy/2 - 1.3) {Doppler-Free Condition};
 
 % Phase-matching equation
-\node[black, above, font=\LARGE]
+\node[black, above, font=\huge]
   at (0, -\boxy/2 + 0.1)
   {$\bigl(\textcolor{c689}{\vec{k}_1}
     + \textcolor{c688}{\vec{k}_2}
