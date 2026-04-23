@@ -9,47 +9,36 @@ from scipy import stats
 # sys.path.insert(0, "C:/Users/sr/Documents/Data Analysis/Python Scripts")  
 # sys.path.insert(0, "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations")  
 from h5Manager import ExpViewer
+from scipy.ndimage import gaussian_filter
 
 # fit funcs
 #region
 def sine(t, A, phi, y0):
     return (A*np.sin(t+phi)+y0)
-def batman(x, n, P0, C):
-    return n/np.sqrt(1-((P0-x)/(C/2))**2)
 
-def arcsine_pdf(P, C, offset=0.5):
-    x = 2*(P - offset)
-    inside = C**2 - x**2
-    pdf = np.zeros_like(P)
-    mask = inside > 0
-    pdf[mask] = 1 / (np.pi * np.sqrt(inside[mask]))
-    return pdf
-
-from scipy.ndimage import gaussian_filter1d
-
-def broadened_pdf(P, C, sigma, offset=0.5):
-    pdf = arcsine_pdf(P, C, offset)
-    dx = P[1] - P[0]
-    sigma_bins = sigma / dx
-    return gaussian_filter1d(pdf, sigma_bins)
+def exp_sine(t, A, w, phi, tau):
+    return (A*np.sin(np.pi*w*t+phi)**2 * np.exp(-t/tau))
 
 #endregion
 
 # extract and process images
 _DATA_DIREC = "C:/Users/ggpan/OneDrive - Stanford/Research/manuscripts/DFSequentialPaper/ThreePhotonSimulations/Data"
-bins = (1, 110, 180,240)
-RID = 76279
+bins = (40, 130, 180,250)
+#bins = (120, 120, 210,250)
+
+RID = 74798
+#RID = 75014
 
 save = False
-fname = "phase_contrast_040726"
+fname = "sim_Rabi1_040726"
 
 exp = ExpViewer(RID, dir=_DATA_DIREC)
 ims = np.array(exp.images)
-ims = ims[:,40:400, 50:150] # crop
-threshold = 20#max(ims[1:20].flatten())/50
+ims = ims[:,30:280, 50:150] # crop
+threshold = 10#max(ims[1:20].flatten())/50
 ims = np.where(ims > threshold, ims, 0) #threshold
 
-
+ims_gaus = gaussian_filter(ims,5)
 # check bounds
 fig, axs = plt.subplots(1, 3, figsize=(10,10))
 for i in range(3):
@@ -57,35 +46,55 @@ for i in range(3):
     axs[i].set_yticks([])
     for val in bins:     
         axs[i].axhline(val, color='red')
+
+
 axs[0].imshow(1-ims[0],cmap=plt.get_cmap('Blues')) 
-axs[1].imshow(1-ims[-1],cmap=plt.get_cmap('Blues')) 
-axs[2].imshow(1-ims[int(len(ims)/2)],cmap=plt.get_cmap('Blues'))  
+axs[1].imshow(1-ims_gaus[-7],cmap='gray') 
+axs[1].axis('off')
+axs[2].imshow(1-ims_gaus[17],cmap=plt.get_cmap('bone'))  
+plt.axis('off')
+plt.savefig(f"{_DATA_DIREC}/cloud_image2.png")
 plt.show()
 
 
+#%%
 nrepeats = exp.parameters['nrepeats']
 npasses = exp.parameters['npasses']
-npoints = exp.parameters["pulse_phase"]['npoints']
-phase =2*np.pi * np.linspace(exp.parameters["pulse_phase"]['start'], 
-                    exp.parameters["pulse_phase"]['stop'], 
+npoints = exp.parameters['frequencies']['npoints']
+freqs = np.linspace(exp.parameters["frequencies"]['start'], 
+                    exp.parameters["frequencies"]['stop'], 
                     npoints)
+freqs = freqs*1e-6
+x0 = [np.sum(ims[i,bins[0]:bins[1],:])/np.sum(ims[i,bins[0]:bins[3],:]) for i in range(len(ims))]
+x1 = [np.sum(ims[i,bins[1]:bins[2],:])/np.sum(ims[i,bins[0]:bins[3],:]) for i in range(len(ims))]
+x2 = [np.sum(ims[i,bins[2]:bins[3],:])/np.sum(ims[i,bins[0]:bins[3],:]) for i in range(len(ims))]
 
-T_ramsey = exp.parameters["delay"]['start']
-fname += f"_{round(T_ramsey*1e6)}us"
-
-xg = [np.sum(ims[i,bins[1]:bins[2],:])/np.sum(ims[i,bins[1]:bins[3],:]) for i in range(len(ims))]
-xc = [np.sum(ims[i,bins[2]:bins[3],:])/np.sum(ims[i,bins[1]:bins[3],:]) for i in range(len(ims))]
 
 # reshape to match phase
-xg = np.reshape(xg, (npoints, nrepeats) )
-xc = np.reshape(xc, (npoints, nrepeats) )
-xg_avg = np.mean(xg, axis=1)
-xg_std = np.std(xg, axis=1)
-xc_avg = np.mean(xc, axis=1)
-xc_std = np.std(xc, axis=1)
+x0 = np.reshape(x0, (npoints, nrepeats) )
+x1 = np.reshape(x1, (npoints, nrepeats) )
+x2 = np.reshape(x2, (npoints, nrepeats) )
+x0_avg = np.mean(x0, axis=1)
+x0_std = np.std(x0, axis=1)
+x1_avg = np.mean(x1, axis=1)
+x1_std = np.std(x1, axis=1)
+x2_avg = np.mean(x2, axis=1)
+x2_std = np.std(x2, axis=1)
 
-popt, pcov = curve_fit(sine, phase, xg_avg, sigma=xg_std, p0=[0.5,3.14, 0.5], maxfev=20000)
+#%%
 
+plt.errorbar(freqs, x0_avg, yerr=x0_std, c='black', fmt='o')
+plt.errorbar(freqs, x1_avg, yerr=x1_std, c='g', fmt='o')
+plt.errorbar(freqs, x2_avg, yerr=x2_std, c='red', fmt='o')
+
+
+plt.xlabel('Pulse time (us)')
+plt.ylabel('Population')
+plt.show()
+#%%
+np.savetxt(f"{_DATA_DIREC}/FreqScan1v.csv", np.array([freqs*10**3,x2.flatten()]).T, delimiter=",", fmt="%f")
+
+#%%
 fig, (ax1, ax2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [2, 1]}, figsize=(5, 3))
 
 # Plot scatter points and sinusoidal fit on the left

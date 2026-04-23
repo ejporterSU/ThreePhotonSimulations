@@ -19,8 +19,8 @@ sys.path.insert(0, str(_DATA_DIR))
 sys.path.insert(0, str(_FIGURE_DIR))
 from fig_style import *
 
-def exp_sine(t, A, w, phi, tau):
-    return (A*np.sin(np.pi*w*t+phi)**2 * np.exp(-t/tau))
+def exp_sine(t, A, w, tau):
+    return (A*np.sin(np.pi*w*t)**2 * np.exp(-t/tau))
 
 
 
@@ -107,10 +107,13 @@ def make_figure():
     pi_times1  = np.array([1, 2, 4, 6, 9.5, 22, 38, 75]) * 1e-6
     omega_1v   = (PI / pi_times1) / (2*PI)
     lw_1v_khz  = np.array([323, 146, 92.7, 66.2, 58.5, 52.9, 47.9, 45.3]) * 2.355
+    lw_1v_err = np.array([20.1,7.7,3.75,1.4,2.02,1.51,1.62,0.92]) * 2.355
 
-    pi_times3  = np.array([2, 4, 6, 9.5, 22, 38, 75, 249, 900, 3000, 5000]) * 1e-6
+    pi_times3  = np.array([2, 4, 6, 9.5, 22, 38, 75, 249, 900, 3000]) * 1e-6
     omega_3v   = (PI / pi_times3) / (2*PI)
-    lw_3v_khz  = np.array([328, 187, 155, 77.2, 31.4, 21.8, 8.7, 2.64, 0.874, 0.247, 0.209])
+    lw_3v_khz  = np.array([328, 187, 155, 77.2, 31.4, 21.8, 8.7, 2.64, 0.874, 0.247])
+    lw_3v_err = np.array([46,22.5,16.4,8.6,1.8,1.4,0.37,0.11,0.043,0.015])
+
 
     rabi_freq_rad = 2 * PI * np.logspace(2, 7.2, 500)
     rabi_freq     = rabi_freq_rad / (2*PI)
@@ -126,6 +129,7 @@ def make_figure():
     data_err1 = np.loadtxt(_DATA_DIR / 'Rabi1err.csv', delimiter=',', skiprows=2)
     data_err2 = np.loadtxt(_DATA_DIR / 'Rabi2err.csv', delimiter=',', skiprows=2)
 
+
     assert np.all(data_ro1[:, 0] == data_ro2[:, 0])
     t_data       = data_ro1[:, 0]
     pop_1S0_data = data_ro1[:, 1]
@@ -139,7 +143,7 @@ def make_figure():
     pop_3P2_err = 4/3 * (data_err2[:, 2])
     pop_3P0_err = 0.5 * (data_err1[:, 3])+ 0.5*(data_err2[:, 3])
 
-    popt, pcov = curve_fit(exp_sine, t_data, pop_3P0_data, sigma=(pop_3P0_err/pop_3P0_data), p0=[1,0.2,0,20], maxfev=20000)
+    popt, pcov = curve_fit(exp_sine, t_data, pop_3P0_data, sigma=(pop_3P0_err/pop_3P0_data), p0=[0.8,0.2,20], maxfev=20000)
 
 
     # ── Figure layout ──────────────────────────────────────────────────────────
@@ -151,6 +155,8 @@ def make_figure():
     # ── Panel (a): Linewidth vs Rabi ───────────────────────────────────────────
     ax1.scatter(omega_1v / 1e3, lw_1v_khz,
                 marker=MARKER_1V, ec='k', fc=COLOR_1V, s=MARKER_S, zorder=2)
+    #ax1.errorbar(omega_1v / 1e3, lw_1v_khz, yerr = lw_1v_err, color=COLOR_1V, fmt='o', alpha=0.8,markeredgecolor='black', markersize = 8)
+    
     ax1.scatter(omega_3v / 1e3, lw_3v_khz,
                 marker=MARKER_3V, ec='k', fc=COLOR_3V, s=MARKER_S, zorder=2)
 
@@ -184,26 +190,48 @@ def make_figure():
     rect = patches.Rectangle((4.6, 5), 5, 170, linewidth=1.5, edgecolor='k', facecolor='none')
     ax1.add_patch(rect)
     #ax1.plot([2, 7], [1e3, 178], c='k', lw=1.5, solid_capstyle='round')
-    ax1.plot([10, 30], [7, 7], c='k', lw=1.5, solid_capstyle='round')
+    ax1.plot([10, 200], [70, 15], c='k', lw=1.5, solid_capstyle='round')
 
     # Inset: frequency scans
-    axins = ax1.inset_axes([0.625, 0.15, 0.35, 0.4])
-    axins.scatter(f_1v_shifted, y_1v_norm, marker=MARKER_1V, color=COLOR_1V, alpha=0.7, s=12)
-    axins.plot(f_fine, y_1v_fit, color=COLOR_1V, linewidth=1, linestyle=':')
-    axins.scatter(f_3v_shifted, y_3v_norm, marker=MARKER_3V, color=COLOR_3V, alpha=0.7, s=12)
-    axins.plot(f_fine, y_3v_fit, color=COLOR_3V, linewidth=1, linestyle=':')
-    axins.set_yticks([])
+    # axins = ax1.inset_axes([0.625, 0.15, 0.35, 0.4])
+    # axins.scatter(f_1v_shifted, y_1v_norm, marker=MARKER_1V, color=COLOR_1V, alpha=0.7, s=12)
+    # axins.plot(f_fine, y_1v_fit, color=COLOR_1V, linewidth=1, linestyle=':')
+    # axins.scatter(f_3v_shifted, y_3v_norm, marker=MARKER_3V, color=COLOR_3V, alpha=0.7, s=12)
+    # axins.plot(f_fine, y_3v_fit, color=COLOR_3V, linewidth=1, linestyle=':')
+    # axins.set_yticks([])
+    # axins.set_xlabel(r'$\Delta\nu$ (kHz)', fontsize=8, labelpad=0)
+    # axins.set_ylabel(r'${}^3P_0$ population', fontsize=8, labelpad=0)
+    # axins.tick_params(axis='x', labelsize=8)
+    # axins.set_xlim(-90, 90)
+    # axins.set_ylim(-0.1, 1.2)
+
+    axins = ax1.inset_axes([0.565, 0.11, 0.35, 0.4])
+    axins.scatter(f_3v_shifted, y_3v, marker=MARKER_3V, color=COLOR_3V, alpha=0.7, s=12)
+    axins.plot(f_fine, y_3v_fit*max(y_3v), color=COLOR_3V, linewidth=1, linestyle=':')
+    axins.set_yticks([0,1])
     axins.set_xlabel(r'$\Delta\nu$ (kHz)', fontsize=8, labelpad=0)
-    axins.set_ylabel(r'Normalized population', fontsize=8, labelpad=0)
+    axins.set_ylabel(r'${}^3P_0$ population', fontsize=8, labelpad=-5, color=COLOR_3V)
     axins.tick_params(axis='x', labelsize=8)
+    axins.tick_params(axis='y', labelsize=8)
+    axins.tick_params(axis='y',colors=COLOR_3V, labelsize=8)
+    axins.spines['left'].set_color(COLOR_3V)
     axins.set_xlim(-90, 90)
-    axins.set_ylim(-0.1, 1.2)
+    axins.set_ylim(-0.1, 1.05)
+    
+    axins2 = axins.twinx()
+    axins2.scatter(f_1v_shifted, y_1v, marker=MARKER_1V, color=COLOR_1V, alpha=0.7, s=12)
+    axins2.plot(f_fine, y_1v_fit*max(y_1v), color=COLOR_1V, linewidth=1, linestyle=':')
+    axins2.set_yticks([0,0.04])
+    axins2.set_ylabel(r'${}^3P_1$ Population',fontsize=8, labelpad=-10, color=COLOR_1V)
+    axins2.tick_params(axis='y',colors=COLOR_1V, labelsize=8)
+    axins2.set_ylim(-0.005, 0.045)
+    axins2.spines['right'].set_color(COLOR_1V)
+
     axins.patch.set_path_effects([
         patheffects.withSimplePatchShadow(offset=(2, -2), shadow_rgbFace='gray', alpha=0.7)
     ])
 
     add_panel_label(ax1, 'a)')
-
     # ── Panel (b): Rabi flopping ───────────────────────────────────────────────
     ax2.plot(t_data, 0.1*t_data/20, linestyle='--', color=COLOR_3P2)
     ax2.plot(t_data, 0.05*t_data/40, linestyle='--', color=COLOR_3P1)
