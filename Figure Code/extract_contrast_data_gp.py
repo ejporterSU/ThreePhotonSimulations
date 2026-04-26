@@ -10,6 +10,8 @@ from scipy import stats
 # sys.path.insert(0, "C:/Users/Erik/Desktop/Kasevich Lab/ThreePhotonSimulations")  
 from h5Manager import ExpViewer
 
+from scipy.ndimage import gaussian_filter
+
 # fit funcs
 #region
 def sine(t, A, phi, y0):
@@ -37,11 +39,11 @@ def broadened_pdf(P, C, sigma, offset=0.5):
 
 # extract and process images
 _DATA_DIREC = "C:/Users/ggpan/OneDrive - Stanford/Research/manuscripts/DFSequentialPaper/ThreePhotonSimulations/Data"
-bins = (1, 110, 180,240)
-RID = 76279
+bins = (1, 55, 155,280)
+RID = 76367
 
 save = False
-fname = "phase_contrast_040726"
+fname = "phase_scan_1000us"
 
 exp = ExpViewer(RID, dir=_DATA_DIREC)
 ims = np.array(exp.images)
@@ -49,7 +51,7 @@ ims = ims[:,40:400, 50:150] # crop
 threshold = 20#max(ims[1:20].flatten())/50
 ims = np.where(ims > threshold, ims, 0) #threshold
 
-
+#ims = gaussian_filter(ims,1)
 # check bounds
 fig, axs = plt.subplots(1, 3, figsize=(10,10))
 for i in range(3):
@@ -84,8 +86,8 @@ xg_std = np.std(xg, axis=1)
 xc_avg = np.mean(xc, axis=1)
 xc_std = np.std(xc, axis=1)
 
-popt, pcov = curve_fit(sine, phase, xg_avg, sigma=xg_std, p0=[0.5,3.14, 0.5], maxfev=20000)
-
+popt, pcov = curve_fit(sine, phase, xg_avg,sigma=xg_std, p0=[0.5,3.14, 0.5], maxfev=20000)
+# sigma=xg_std,
 fig, (ax1, ax2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [2, 1]}, figsize=(5, 3))
 
 # Plot scatter points and sinusoidal fit on the left
@@ -97,14 +99,14 @@ C_err = 2*np.sqrt(np.diag(pcov))[0]
 ax1.set_xlabel('Phase (rad.)')
 ax1.set_ylabel('1S0 Population')
 ax1.set_title(f"Ramsey: RID: {RID}")
-ax1.set_ylim(min(xg)-0.05, max(xg)+.05)
+ax1.set_ylim(min(xg_avg)-0.05, max(xg_avg)+.05)
 
 
 
 
 # Plot the histogram on the right with the correct orientation
 counts, bins, _ = ax2.hist(xg.flatten(), bins=20, alpha=0.5, color='blue', orientation='horizontal', edgecolor='black')
-ax2.set_ylim(min(xg)-0.05, max(xg)+.05)
+ax2.set_ylim(min(xg_avg)-0.05, max(xg_avg)+.05)
 bins = np.array(bins)
 bins = (bins[1:] + bins[:-1])/2
 popt1,pcov1 = curve_fit(batman,bins, counts, p0=[5,0.5, 0.7], maxfev=100000)
@@ -128,7 +130,7 @@ C_err1 = np.sqrt(stats.iqr(heapq.nlargest(10, xg.flatten()))**2 + stats.iqr(heap
 #print(f"Peak-to-Peak : {max(xg.flatten())-min(xg.flatten()):.3f}")
 print(threshold)
 print(f"Peak-to-Peak : {Con1:.3f}\t{C_err1:.3f}")
-#print(f"Sine fit     : {Con:.3f}\t{C_err:.3f}")
+print(f"Sine fit     : {Con:.3f}\t{C_err:.3f}")
 print(f"Bin width   : {bins[1]-bins[0]:.3f}")
 print(counts)
 print(bins[-2]-bins[1])

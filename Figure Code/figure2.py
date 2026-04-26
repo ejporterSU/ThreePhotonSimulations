@@ -244,8 +244,10 @@ def make_figure():
     #ax2.scatter(t_data, pop_1S0_data, s=MARKER_S, marker='s', ec='k', color=COLOR_1S0)
     ax2.errorbar(t_data, pop_3P0_data, yerr = pop_3P0_err, color=COLOR_3P0, fmt='s', alpha=0.8,markeredgecolor='black', markersize = 8)
     ax2.errorbar(t_data, pop_3P1_data, yerr = pop_3P1_err, color=COLOR_3P1, fmt='^', alpha=0.8,markeredgecolor='black', markersize = 9)
-    ax2.errorbar(t_data, pop_3P2_data, yerr = pop_3P2_err, color=COLOR_3P2, fmt='*', alpha=0.8,markeredgecolor='black', markersize = 10)
-
+    #ax2.errorbar(t_data, pop_3P2_data, yerr = pop_3P2_err, color=COLOR_3P2, fmt='*', alpha=0.8,markeredgecolor='black', markersize = 10)
+    ax2.errorbar(np.delete(t_data,32), np.delete(pop_3P2_data,32), yerr = np.delete(pop_3P2_err,32), color=COLOR_3P2, fmt='*', alpha=0.8,markeredgecolor='black', markersize = 10)
+    
+    print(max(np.delete(pop_3P2_data,32)))
     #ax2.scatter(t_data, pop_3P0_data,s=MARKER_S, marker='s', ec='k', color=COLOR_3P0)
     #ax2.scatter(t_data, pop_3P1_data, s=35, marker='^', ec='k', color=COLOR_3P1, alpha=0.8)
     #ax2.scatter(t_data, pop_3P2_data, s=35, marker='*', ec='k', color=COLOR_3P2, alpha=0.8)
@@ -262,15 +264,15 @@ def make_figure():
     
     ax2.set_xlabel(r'Pulse duration ($\mathrm{\mu}$s)', fontsize=FS_LABEL)
     ax2.set_ylabel('Population', fontsize=FS_LABEL)
-    ax2.set_xlim(0 - 0.25, max(t_data) + 1.25)
+    ax2.set_xlim(0 - 0.25, max(t_data) + 0.25)
     ax2.set_ylim(-0.05, 1.15)
     ax2.tick_params(axis='both', direction='in', which='both', width=TICK_WIDTH)
     ax2.legend(loc='upper left', fontsize=10, frameon=False, ncol=1,
                columnspacing=0.5, handlelength=3, handletextpad=0.25)
 
-    rect2 = patches.Rectangle((9.85, -0.03), .4, .3, linewidth=1.5, edgecolor='k', facecolor='none')
-    ax2.add_patch(rect2)
-    ax2.plot([10.1, 10.1], [.27, .75], c='k', lw=1.5, solid_capstyle='round')
+    #rect2 = patches.Rectangle((9.85, -0.03), .4, .3, linewidth=1.5, edgecolor='k', facecolor='none')
+    #ax2.add_patch(rect2)
+    ax2.plot([7.8, 9], [.71, .75], c='k', lw=1.5, solid_capstyle='round')
 
     # Inset: atom cloud image
     width=0.5
@@ -285,7 +287,7 @@ def make_figure():
     #                 fontsize=6, color='#1d1c1c', weight='bold',
     #                 transform=axins_img.transAxes)
     img = plt.imread(str(_DATA_DIR / f'cloud_images.png'))
-    axins_img = ax2.inset_axes([0.6 , 0.66, width, height])
+    axins_img = ax2.inset_axes([0.6, 0.66, width, height])
     axins_img.set_xticks([])
     axins_img.set_yticks([])
     axins_img.imshow(img)
