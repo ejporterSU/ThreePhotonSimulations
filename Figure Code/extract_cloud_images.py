@@ -48,8 +48,9 @@ ims = ims[:,10:280, 50:150] # crop
 threshold = 30#max(ims[1:20].flatten())/50
 ims = np.where(ims > threshold, ims, 0) #threshold
 
-ims_gaus2 = gaussian_filter(ims,5)[-1]
+ims_gaus2 = gaussian_filter(ims,5)[-41]
 
+plt.imshow(1-ims_gaus2.T,cmap=plt.get_cmap('bone')) 
 #%%
 fig, axs = plt.subplots(2, 1, figsize=(5,5))
 axs[0].imshow(1-ims_gaus.T,cmap=plt.get_cmap('bone')) 
