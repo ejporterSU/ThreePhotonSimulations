@@ -22,8 +22,8 @@ DPI_IMPORT = 600   # rasterization resolution for input PDFs
 FIG_WIDTH  = 5.0   # total figure width in inches
 FIG_HEIGHT = 8.0
 PANELS = [
-    {"path": str(_FIGURE_DIR / "energy_diagram.pdf"),    "label": "a)"},
-    {"path": str(_FIGURE_DIR / "three_photon_geom.pdf"), "label": "b)"},
+    {"path": str(_FIGURE_DIR / "three_photon_geom.pdf"),    "label": "a)"},
+    {"path": str(_FIGURE_DIR / "energy_diagram.pdf"), "label": "b)"},
 ]
 
 
@@ -69,3 +69,5 @@ if __name__ == '__main__':
     fig = make_figure()
     save_figure(fig, 'fig1')
     plt.show()
+
+# %%

@@ -23,10 +23,10 @@ def exp_sine(t, A, w, phi, tau):
 
 # extract and process images
 _DATA_DIREC = "C:/Users/ggpan/OneDrive - Stanford/Research/manuscripts/DFSequentialPaper/ThreePhotonSimulations/Data"
-bins = (40, 130, 180,250)
+bins = (40, 160, 250,350)
 #bins = (120, 120, 210,250)
 
-RID = 74798
+RID = 74794
 #RID = 75014
 
 save = False
@@ -34,7 +34,7 @@ fname = "sim_Rabi1_040726"
 
 exp = ExpViewer(RID, dir=_DATA_DIREC)
 ims = np.array(exp.images)
-ims = ims[:,30:280, 50:150] # crop
+ims = ims[:,30:280, 50:110] # crop
 threshold = 10#max(ims[1:20].flatten())/50
 ims = np.where(ims > threshold, ims, 0) #threshold
 
@@ -65,8 +65,8 @@ freqs = np.linspace(exp.parameters["frequencies"]['start'],
                     exp.parameters["frequencies"]['stop'], 
                     npoints)
 freqs = freqs*1e-6
-x0 = [np.sum(ims[i,bins[0]:bins[1],:])/np.sum(ims[i,bins[0]:bins[3],:]) for i in range(len(ims))]
-x1 = [np.sum(ims[i,bins[1]:bins[2],:])/np.sum(ims[i,bins[0]:bins[3],:]) for i in range(len(ims))]
+x0 = [np.sum(ims[i,bins[0]:bins[1],:])/np.sum(ims[i,bins[0]:bins[2],:]) for i in range(len(ims))]
+x1 = [np.sum(ims[i,bins[1]:bins[2],:])/np.sum(ims[i,bins[0]:bins[2],:]) for i in range(len(ims))]
 x2 = [np.sum(ims[i,bins[2]:bins[3],:])/np.sum(ims[i,bins[0]:bins[3],:]) for i in range(len(ims))]
 
 
@@ -83,78 +83,27 @@ x2_std = np.std(x2, axis=1)
 
 #%%
 
-plt.errorbar(freqs, x0_avg, yerr=x0_std, c='black', fmt='o')
-plt.errorbar(freqs, x1_avg, yerr=x1_std, c='g', fmt='o')
-plt.errorbar(freqs, x2_avg, yerr=x2_std, c='red', fmt='o')
+#plt.errorbar(freqs, x0_avg, yerr=x0_std, c='black', fmt='o')
+#plt.errorbar(freqs, x1_avg, yerr=x1_std, c='g', fmt='o')
+plt.errorbar(freqs*10**6, x1_avg, yerr=x1_std, c='red', fmt='o')
+#freqs_mov =(freqs[:-1] + freqs[1:]) / 2
+#x2_mov=(x2_avg[:-1] + x2_avg[1:]) / 2
 
+# def moving_average(a, n=3):
+#     ret = np.cumsum(a, dtype=float)
+#     ret[n:] = ret[n:] - ret[:-n]
+#     return ret[n - 1:] / n
+# freqs_mov=moving_average(freqs,n=3)*10**6
+# x2_mov=moving_average(x2_avg,n=3)
 
-plt.xlabel('Pulse time (us)')
+#plt.scatter(freqs_mov,x2_mov)
+
+plt.xlabel('Frequency (Hz)')
 plt.ylabel('Population')
 plt.show()
 #%%
-np.savetxt(f"{_DATA_DIREC}/FreqScan1v.csv", np.array([freqs*10**3,x2.flatten()]).T, delimiter=",", fmt="%f")
+np.savetxt(f"{_DATA_DIREC}/FreqScanNarrow.csv", np.array([freqs*10**3,x2.flatten()]).T, delimiter=",", fmt="%f")
 
-#%%
-fig, (ax1, ax2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [2, 1]}, figsize=(5, 3))
-
-# Plot scatter points and sinusoidal fit on the left
-ax1.errorbar(phase, xg_avg, yerr=xg_std, c='black', fmt='o')
-ax1.plot(phase, sine(phase, *popt), c='r')
-Con = 2*popt[0]
-C_err = 2*np.sqrt(np.diag(pcov))[0]
-
-ax1.set_xlabel('Phase (rad.)')
-ax1.set_ylabel('1S0 Population')
-ax1.set_title(f"Ramsey: RID: {RID}")
-ax1.set_ylim(min(xg)-0.05, max(xg)+.05)
-
-
-
-
-# Plot the histogram on the right with the correct orientation
-counts, bins, _ = ax2.hist(xg.flatten(), bins=20, alpha=0.5, color='blue', orientation='horizontal', edgecolor='black')
-ax2.set_ylim(min(xg)-0.05, max(xg)+.05)
-bins = np.array(bins)
-bins = (bins[1:] + bins[:-1])/2
-popt1,pcov1 = curve_fit(batman,bins, counts, p0=[5,0.5, 0.7], maxfev=100000)
-ax2.plot(batman(np.linspace(0,1,100),*popt1),np.linspace(0,1,100), color='red' )
-
-ax2.set_xlim([0, max(counts) + 5])
-ax2.set_xlabel('Counts')
-ax2.set_yticks([])
-
-ax2.text(0.1, 1, f"Csine = {Con:.3f}+-{C_err:.3f}\nCbat = {popt1[-1]:.3f}+-{np.sqrt(np.diag(pcov1))[0]:.3f}\nP2P: {max(xc.flatten())-min(xc.flatten()):.2f}", 
-         transform=ax2.transAxes, va='bottom', ha="left", color='black', fontsize=7)
-
-plt.tight_layout()
-plt.show()
-
-
-pk1 = np.median(heapq.nlargest(15, xg.flatten()))
-pk2 = np.median(heapq.nsmallest(15, xg.flatten()))
-Con1 = pk1-pk2
-C_err1 = np.sqrt(stats.iqr(heapq.nlargest(10, xg.flatten()))**2 + stats.iqr(heapq.nsmallest(10, xg.flatten()))**2) 
-#print(f"Peak-to-Peak : {max(xg.flatten())-min(xg.flatten()):.3f}")
-print(threshold)
-print(f"Peak-to-Peak : {Con1:.3f}\t{C_err1:.3f}")
-#print(f"Sine fit     : {Con:.3f}\t{C_err:.3f}")
-print(f"Bin width   : {bins[1]-bins[0]:.3f}")
-print(counts)
-print(bins[-2]-bins[1])
-if save:
-    data = {
-        "phases": phase.tolist(),
-        "xc":xc.flatten().tolist(), "xg":xg.flatten().tolist(),
-        "xg_avg": xg_avg.tolist(), "xg_std": xg_std.tolist(),
-        "xc_avg": xc_avg.tolist(), "xc_std": xc_std.tolist(),
-        "hist_bins": bins.tolist(), "hist_counts": counts.tolist(),
-        "sine_popt": popt.tolist(),
-        "batman_popt": popt1.tolist(),
-        "p2p": float(max(xc.flatten()) - min(xc.flatten()))
-    }
-    with open(f"{_DATA_DIREC}/{fname}.json", "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"Saved to {_DATA_DIREC}/{fname}.json")
 
 
 # %%
