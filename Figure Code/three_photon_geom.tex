@@ -56,17 +56,17 @@
 % Beam 3: vertical, from below
 \draw[c679, beam]
   (0, -\arrspace-\rad) -- (0, -\arrspace)
-  node[midway, left] {$\Omega_3,\; \vec{k}_3$};
+  node[midway, left] {$\Omega_3,\; \mathbf{k}_3$};
 
 % Beam 2: from lower-left at 30 deg
 \draw[c688, beam]
   (-150:\arrspace+\rad) -- ++(30:\rad)
-  node[midway, above left] {$\Omega_2,\; \vec{k}_2$};
+  node[midway, above left] {$\Omega_2,\; \mathbf{k}_2$};
 
 % Beam 1: from lower-right at 150 deg
 \draw[c689, beam]
   (-30:\arrspace+\rad) -- ++(150:\rad)
-  node[midway, above right] {$\Omega_1,\; \vec{k}_1$};
+  node[midway, above right] {$\Omega_1,\; \mathbf{k}_1$};
 
 % =======================================================
 % Atom cloud (center of beam intersection)
@@ -154,7 +154,7 @@
 % =======================================================
 \draw[-{Stealth[scale=1.4]}, line width=1.6pt, black]
   (1.2, 1.2) -- (-1.2, 1.2)
-  node[midway, above, font=\Large, black] {$\vec{B}$};
+  node[midway, above, font=\Large, black] {$\mathbf{B}$};
 
 % =======================================================
 % Gravity marker (circle-cross = into page)
@@ -164,7 +164,7 @@
   (\gx-0.16, \gy-0.16) -- (\gx+0.16, \gy+0.16);
 \draw[thick, black]
   (\gx+0.16, \gy-0.16) -- (\gx-0.16, \gy+0.16);
-\node[right, black, font=\Large] at (\gx+0.25, \gy) {$\vec{g}$};
+\node[right, black, font=\Large] at (\gx+0.25, \gy) {$\mathbf{g}$};
 
 % =======================================================
 % Coordinate-axis inset (bottom-left)
@@ -191,7 +191,7 @@
 % =======================================================
 % Inset figure (Doppler-free spectrum)
 % =======================================================
-\node[anchor=north east, inner sep=6pt] at (7, 4.5) {
+\node[anchor=north east, inner sep=6pt] at (7, -4.5) {
   \includegraphics[width=5cm]{doppler_free.pdf}
 };
 

@@ -43,13 +43,13 @@
 \coordinate (C) at ({\rad*cos(60)},   {\rad*sin(60)});     % top-right
 
 % k_1: bottom-right -> left
-\draw[c689, kvec] (A) -- (B) node[midway, below left]  {$\vec{k}_1$};
+\draw[c689, kvec] (A) -- (B) node[midway, below left]  {$\mathbf{k}_1$};
 
 % k_2: left -> top-right
-\draw[c688, kvec] (B) -- (C) node[midway, above left]  {$\vec{k}_2$};
+\draw[c688, kvec] (B) -- (C) node[midway, above left]  {$\mathbf{k}_2$};
 
 % -k_3: top-right -> bottom-right (closes the triangle)
-\draw[c679, kvec] (C) -- (A) node[midway, right]       {$-\vec{k}_3$};
+\draw[c679, kvec] (C) -- (A) node[midway, right]       {$-\mathbf{k}_3$};
 
 % =======================================================
 % Bounding box and labels
@@ -66,10 +66,10 @@
 % Phase-matching equation
 \node[black, above, font=\huge]
   at (0, -\boxy/2 + 0.1)
-  {$\bigl(\textcolor{c689}{\vec{k}_1}
-    + \textcolor{c688}{\vec{k}_2}
-    - \textcolor{c679}{\vec{k}_3}\bigr)
-    \cdot \vec{v} = 0$};
+  {$\bigl(\textcolor{c689}{\mathbf{k}_1}
+    + \textcolor{c688}{\mathbf{k}_2}
+    - \textcolor{c679}{\mathbf{k}_3}\bigr)
+    \cdot \mathbf{v} = 0$};
 
 \end{tikzpicture}
 \end{document}

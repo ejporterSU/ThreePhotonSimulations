@@ -157,7 +157,7 @@ w0_679       = 0.90e-3       # 679 nm 1/e^2 radius [m]
 beam_radii = np.array([w0_689, w0_688, w0_679])
 
 P_689        = 18.88e-3             # 689 nm peak power [W]
-P_679        = 4.86e-3             # 679 nm peak power [W] 
+P_679        = 13.86e-3             # 679 nm peak power [W] 
 P_688        = 8.77e-3             # 688 nm peak power [W] 
 
 I_689 = 2*P_689/(PI*w0_689**2) * 100
@@ -186,8 +186,8 @@ dwB_3s1= get_zeeman_detuning(G_J_3S1, B_field_T)
 # Single-photon detunings from each resonance [rad/s] 
 delta_AC = 2*PI * 0.65e6
 Delta_1 = dwB_3p1 + 2*PI * 5.0e6   # 689 nm detuning from 1S0 -> 3P1
-Delta_2 = 2*PI *  400e6   # 688 nm detuning from 3P1 -> 3S1
-Delta_3 = 2*PI *  400e6  + Delta_1  + delta_AC # 679 nm detuning from 3S1 -> 3P0
+Delta_2 = 2*PI *  400e6 - Delta_1   # 688 nm detuning from 3P1 -> 3S1
+Delta_3 = 2*PI *  400e6  + delta_AC # 679 nm detuning from 3S1 -> 3P0
 
 # ── Drive envelope ────────────────────────────────────────────────────────── #
 # USE_RAMP = True  → erf ramp, reaches ~99% at t ≈ 2*tau_ramp (~200 ns total)
@@ -216,7 +216,7 @@ couplings_689 = get_coupling_factor(pol_vecs[0], quant_axis)
 couplings_688 = get_coupling_factor(pol_vecs[1], quant_axis)
 couplings_679 = get_coupling_factor(pol_vecs[2], quant_axis)
 
-MODE='TIME'
+MODE='FREQ'
 
 
 if MODE=='TIME':
