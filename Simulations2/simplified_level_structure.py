@@ -36,6 +36,18 @@ EPS0 = const.epsilon_0
 # -- HELPERS ------------------
 #region
 def sample_atomic_ensemble(radii, temperatures, mass=88*AMU, n_samples=1):
+    """Sample positions and velocities from a thermal Gaussian cloud.
+
+    Args:
+        radii:        1-sigma cloud radius [m]. Scalar for isotropic, or [x,y,z] array.
+        temperatures: Temperature [K]. Scalar for isotropic, or [x,y,z] array.
+        mass:         Atomic mass [kg]. Defaults to Sr-88.
+        n_samples:    Number of atoms to draw.
+
+    Returns:
+        positions  (n_samples, 3) array [m]
+        velocities (n_samples, 3) array [m/s]
+    """
     sigma_r = np.array(radii)
     sigma_v = np.sqrt(kb * np.array(temperatures) / mass)
 
@@ -47,12 +59,30 @@ def sample_atomic_ensemble(radii, temperatures, mass=88*AMU, n_samples=1):
     return np.atleast_2d(positions), np.atleast_2d(velocities)
 
 def get_k_hat(theta, theta_z):
+    """Return a unit wavevector in the azimuth-elevation parameterisation.
+
+    Args:
+        theta:   Azimuthal angle in the x-y plane [rad].
+        theta_z: Elevation angle above the x-y plane [rad].
+
+    Returns:
+        (3,) unit vector [cos(θ_z)cos(θ), cos(θ_z)sin(θ), sin(θ_z)].
+    """
     return np.array([np.cos(theta_z)*np.cos(theta),
                      np.cos(theta_z)*np.sin(theta),
                      np.sin(theta_z)])
 
 
 def get_effective_r_perp(pos, k_vec):
+    """Compute each atom's perpendicular distance from a beam axis.
+
+    Args:
+        pos:   (N, 3) atom positions [m].
+        k_vec: (3,) beam wavevector (any magnitude; only direction is used).
+
+    Returns:
+        (N,) perpendicular distances from the beam axis [m].
+    """
     k_hat      = k_vec / np.linalg.norm(k_vec)
     proj_mag   = np.sum(pos * k_hat, axis=1)   # scalar projection onto beam axis, (N,)
     r_parallel = np.outer(proj_mag, k_hat)      # parallel component, (N, 3)
@@ -60,7 +90,24 @@ def get_effective_r_perp(pos, k_vec):
     return np.linalg.norm(r_perp_vec, axis=1)
 
 def get_calculated_parameters(position, velocity, k_vecs, omegas, beam_radii):
+    """Compute per-atom Doppler shifts and beam-attenuated Rabi frequencies.
 
+    Doppler shift for beam i: δ_i = -k⃗_i · v⃗  (add to bare detuning in H_diag).
+    Rabi frequency for beam i: Ω_i(r) = Ω_i,0 * exp(-r_perp² / w_i²), where
+    r_perp is the atom's distance from the beam axis and w_i is the 1/e² radius.
+
+    Args:
+        position:   (N, 3) atom positions [m].
+        velocity:   (N, 3) atom velocities [m/s].
+        k_vecs:     Tuple of three (3,) full wavevectors [rad/m] (magnitude = 2π/λ).
+        omegas:     Tuple of three peak Rabi frequencies (Ω_689, Ω_688, Ω_679) [rad/s].
+        beam_radii: Array of three 1/e² beam radii [m].
+
+    Returns:
+        Dict with keys 'beam_0', 'beam_1', 'beam_2', each containing:
+            'dshift': (N,) Doppler shift [rad/s]
+            'Omega':  (N,) attenuated Rabi frequency [rad/s]
+    """
     k_vec_0, k_vec_1, k_vec_2 = k_vecs
     rabi_0, rabi_1, rabi_2 = omegas
     w0, w1, w2 = beam_radii
@@ -117,6 +164,7 @@ theta_0,  theta_0z = np.radians(59.4384), 0.0   # 689 nm
 theta_1,  theta_1z = np.radians(-59.64),  0.0   # 688 nm
 theta_2,  theta_2z = 0.0,                 0.0   # 679 nm (along x)
 
+# full wavevectors [rad/m]: magnitude 2π/λ so that k⃗·v⃗ gives the Doppler shift in rad/s
 k_vec_0 = (2*PI / lambda_689) * get_k_hat(theta_0, theta_0z)
 k_vec_1 = (2*PI / lambda_688) * get_k_hat(theta_1, theta_1z)
 k_vec_2 = (2*PI / lambda_679) * get_k_hat(theta_2, theta_2z)
@@ -181,7 +229,7 @@ if PLOT_ENVELOPE and USE_RAMP: # just for visualizing rabi envelopes
     preview_t_ons = [0, T_MAX / 4, T_MAX / 2, T_MAX * 3 / 4, T_MAX]
     fig_env, ax_env = plt.subplots(figsize=(7, 3))
     for t_on in preview_t_ons:
-        T_sim   = t_on + 150e-9   # sim end: fall is complete here
+        T_sim   = t_on + 150e-9   # extra time past t_fall (= t_on+45ns) for AOM ramp to reach ~0
         t_plot = np.linspace(0, T_sim, 2000)
         env = np.array([drive_envelope(t, {'T_total': t_on}) for t in t_plot])
         ax_env.plot(t_plot * 1e6, env, label=f"t_on = {t_on*1e6:.2f} µs")
@@ -198,13 +246,15 @@ if PLOT_ENVELOPE and USE_RAMP: # just for visualizing rabi envelopes
 rho0 = g*g.dag()
 # ── Collapse operators (Lindblad spontaneous emission) ────────────────────── #
 c_3P1_to_1S0 = [np.sqrt(gamma_689) * (g*e1.dag()), np.sqrt(gamma_689) * (g*e3.dag()) ]
-c_3S1_to_3P1 = [np.sqrt(gamma_688/2) * (e1*v2.dag()), np.sqrt(gamma_688/2) * (e3*v2.dag())]
+c_3S1_to_3P1 = [np.sqrt(gamma_688/2) * (e1*v2.dag()), np.sqrt(gamma_688/2) * (e3*v2.dag())]  # /2 per channel: two equal branches (→e1, →e3) sum to gamma_688
 c_3S1_to_3P0 = [np.sqrt(gamma_679) * (r*v2.dag())]
 c_3S1_to_3P2 = [np.sqrt(gamma_707) * (ds*v2.dag())]
 c_ops = c_3P1_to_1S0 + c_3S1_to_3P1 + c_3S1_to_3P0 + c_3S1_to_3P2
 
 if MODE=='TIME': # for performing rabi scans
     if N_atoms == 1:  # 0 temp, 0 cloud size assuming
+        # rotating frame: diagonal entry is -Δ_i for each state, where Δ_i is the
+        # cumulative laser detuning from that state's resonance (+ Zeeman shift where applicable)
         H_diag = (
             - (Delta_1 + dwB_3p1           )  * projs[1]
             - (Delta_1 - dwB_3p1           )  * projs[2]
