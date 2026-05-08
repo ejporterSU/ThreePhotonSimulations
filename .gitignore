@@ -7,6 +7,8 @@
 ArchiveData/
 Figures/
 *.zip
+.claude/
+.vscode/
 
 # Python
 __pycache__/
