@@ -115,7 +115,7 @@ def make_figure():
     # ── Figure layout ──────────────────────────────────────────────────────────
 
     fig = plt.figure(figsize=(11, 4.5))
-    gs = GridSpec(3, 2, width_ratios=[1.3, 1], wspace=0.25, hspace=0.03,
+    gs = GridSpec(3, 2, width_ratios=[1, 1], wspace=0.25, hspace=0.03,
                     left=0.07, right=0.96, top=0.93, bottom=0.13)
     ax_p1 = fig.add_subplot(gs[0, 0])
     ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
@@ -233,7 +233,7 @@ def make_figure():
     ax_sens.set_yscale('log')
     ax_sens.set_xlim(0.7, 2e4)
     ax_sens.set_ylim(0.1, 2e3)
-    ax_sens.set_xlabel(r'Ramsey delay $\tau$x (\mathrm{\mu}$s)', fontsize=FS_LABEL)
+    ax_sens.set_xlabel(r'Ramsey delay $\tau \, (\mathrm{\mu}$s)', fontsize=FS_LABEL)
     ax_sens.set_ylabel('Rel. Sensitivity', fontsize=FS_LABEL)
     ax_sens.set_xticks([1, 10, 100, 1000, 10000])
     ax_sens.set_xticklabels(['1', '10', '100', r'$10^3$', r'$10^4$'], fontsize=FS_TICK)
@@ -252,3 +252,5 @@ if __name__ == '__main__':
     fig = make_figure()
     save_figure(fig, f'fig4')
     plt.show()
+
+# %%
