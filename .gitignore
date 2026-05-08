@@ -5,6 +5,7 @@
 *.csv
 *.json
 ArchiveData/
+Figures/
 
 # Python
 __pycache__/
