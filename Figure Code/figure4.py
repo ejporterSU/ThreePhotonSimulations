@@ -115,7 +115,7 @@ def make_figure():
     # ── Figure layout ──────────────────────────────────────────────────────────
 
     fig = plt.figure(figsize=(11, 4.5))
-    gs = GridSpec(3, 2, width_ratios=[1, 1], wspace=0.25, hspace=0.03,
+    gs = GridSpec(3, 2, width_ratios=[1.1, 1], wspace=0.25, hspace=0.03,
                     left=0.07, right=0.96, top=0.93, bottom=0.13)
     ax_p1 = fig.add_subplot(gs[0, 0])
     ax_p2 = fig.add_subplot(gs[1, 0], sharex=ax_p1)
