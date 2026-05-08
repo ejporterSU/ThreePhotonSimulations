@@ -12,16 +12,23 @@ matplotlib.use('Agg')   # must be set before any other matplotlib import
 import matplotlib.pyplot as plt
 from fig_style import save_figure
 
-from figure1 import make_figure as make_fig1
-from figure2 import make_figure as make_fig2
-from figure3 import make_figure as make_fig3
-from figure4 import make_figure as make_fig4
+from figure_3v import make_figure as make_fig_3v
+from figure_simulRabi import make_figure as make_fig_simulRabi
+from figure_simulline import make_figure as make_fig_simulline
+from figure_seqRabi import make_figure as make_fig_seqRabi
+from figure_ramsey import make_figure as make_fig_ramsey
+
+
+
+
 
 figures = [
-    ('fig1',  make_fig1,  {}),
-    ('fig2',  make_fig2,  {}),
-    ('fig3',  make_fig3,  {}),
-    ('fig4',  make_fig4,  {})
+
+    ('fig_3v',  make_fig_3v,  {}),
+    ('fig_simulRabi',  make_fig_simulRabi,  {}),
+    ('fig_simulline',  make_fig_simulline,  {}),
+    ('fig_seqRabi',  make_fig_seqRabi,  {}),
+    ('fig_ramsey',  make_fig_ramsey,  {})
 ]
 
 for stem, fn, kwargs in figures:

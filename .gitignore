@@ -1,7 +1,10 @@
 # Data files
 *.h5
 *.hdf5
+*.txt
 *.csv
+*.json
+ArchiveData/
 
 # Python
 __pycache__/
@@ -17,6 +20,27 @@ build/
 
 # LaTeX
 *.aux
+*.glo
+*.idx
+*.log
+*.toc
+*.ist
+*.acn
+*.acr
+*.alg
+*.bbl
+*.blg
+*.dvi
+*.glg
+*.gls
+*.ilg
+*.ind
+*.lof
+*.lot
+*.maf
+*.mtc
+*.mtc1
+*.out
 *.log
 
 # OS
