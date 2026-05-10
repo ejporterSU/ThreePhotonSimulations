@@ -194,20 +194,20 @@ Delta_3 = delta_AC # nominally on resonance, so gets set to the ac stark
 
 
 # ── sim params ────────────────────────────────────────────────────────── #
-N_atoms  = 500  # set to 1 if you dont want to use a thermal, finite size cloud
-T_atom   = [8e-6,  8e-6,  5e-6]   # atom temperature [K] per axis (x, y, z)
-sigma_r  = [40e-6, 40e-6, 120e-6]  # cloud 1-sigma radius [m] per axis (x, y, z)
+N_atoms  = 1000  # set to 1 if you dont want to use a thermal, finite size cloud
+T_atom   = [8.2e-6,  8.2e-6,  4.8e-6]   # atom temperature [K] per axis (x, y, z)
+sigma_r  = [42e-6, 42e-6, 128e-6]  # cloud 1-sigma radius [m] per axis (x, y, z)
 
 MODE='TIME'  # set to FREQ to find AC stark
 USE_RAMP  = True  # False for square wave, True for AOM shapes
 PLOT_ENVELOPE = False   # set True to preview the drive envelope before running
 T_MAX  = 10e-6   # total time [s]
-dt = 20e-9  # simulation resolution
+dt = 50e-9  # simulation resolution
 N_t    = int(T_MAX/dt) + 1
 tlist  = np.linspace(0, T_MAX, N_t)
 ac_starks = 2*PI*1e6*np.linspace(-0.5, -0.3, 20)  # used for finding the AC stark, zoom in as needed
 
-N_t_ramp = 50  # number of ramped points to simulate (different from simulation resolution)
+N_t_ramp = 40  # number of ramped points to simulate (different from simulation resolution)
 
 def drive_envelope(t, args):
     if USE_RAMP:
@@ -462,8 +462,8 @@ if MODE=='FREQ':
 #%%
 
 # for saving to a text file, will need to change what gets saved depending on scenario probably
-# pops = np.array(ensemble_pops)
-# state_names = ['1S0', '3P1(mJ=-1)', '3P1(mJ+1)', '3S1(mJ=0)', '3P2(all)', '3P0']
-# header = 'T [us]  ' + ', '.join(state_names)
-# data   = np.column_stack([t_on_list * 1e6, pops.T])
-# np.savetxt('sim_pops.txt', data, header=header, fmt='%.6e', delimiter=',')
+pops = np.array(ensemble_pops)
+state_names = ['1S0', '3P1(mJ=-1)', '3P1(mJ+1)', '3S1(mJ=0)', '3P2(all)', '3P0']
+header = 'T [us]  ' + ', '.join(state_names)
+data   = np.column_stack([t_on_list * 1e6, pops.T])
+np.savetxt('sim_pops_v2.txt', data, header=header, fmt='%.6e', delimiter=',')

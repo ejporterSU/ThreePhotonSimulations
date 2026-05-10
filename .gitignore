@@ -4,6 +4,7 @@
 *.txt
 *.csv
 *.json
+*.zip
 ArchiveData/
 
 # Python

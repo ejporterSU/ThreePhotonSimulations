@@ -75,7 +75,7 @@ def make_figure():
     ax2.errorbar(t_data, pop_3P2_data, yerr = pop_3P2_err, color=COLOR_3P2, fmt='*', markeredgecolor='black', markersize = 10)
 
     # Simulation data
-    with open(_DATA_DIR / "sim_pops.txt", 'r') as f:
+    with open(_DATA_DIR / "sim_pops_v2.txt", 'r') as f:
         header = f.readline().strip()
         sim_data = np.loadtxt(f, delimiter=',')
 
