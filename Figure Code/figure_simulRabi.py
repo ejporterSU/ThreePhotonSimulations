@@ -119,7 +119,6 @@ def make_figure():
     axins_img.imshow(img)
 
 
-
     return fig
 
 
