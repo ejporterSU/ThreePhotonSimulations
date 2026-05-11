@@ -4,8 +4,8 @@
 *.txt
 *.csv
 *.json
-"Figure Code"/*.pdf
-"Figure Code"/*.png
+Figure Code/*.pdf
+Figure Code/*.png
 ArchiveData/
 Figures/
 *.zip
