@@ -4,6 +4,7 @@
 *.txt
 *.csv
 *.json
+Figures/
 *.pdf
 *.png
 ArchiveData/
