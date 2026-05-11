@@ -19,22 +19,23 @@
 % =======================================================
 
 % Level line half-widths
-\def\lw{0.55}
+\def\lw{0.4}
 
 % Zeeman sublevel vertical splitting
-\def\dz{0.3}
+\def\dz{0.5}
 
 % Horizontal offset between m_j sublevels
 \def\offset{2}
 
 % Detuning offset (dashed virtual levels)
-\def\detune{0.3}
+\def\detune{0.4}
 
 % Label x-offset (state term symbols on the left)
 \def\lboff{-3.2}
 
 % m_j header vertical offset above top level
-\def\mjoff{0.5}
+\def\mjoff{0.75}
+
 
 % --- X centers (all manifolds share x = 0) ---
 \def\xGnd{0}
@@ -44,9 +45,9 @@
 
 % --- Y positions (increasing energy upward) ---
 \def\yGnd{-0.5}  % 1S0  ground state
-\def\yPo{1.2}    % 3P0  (~14504 cm^{-1})
-\def\yPz{2.5}    % 3P1  (~14836 cm^{-1})
-\def\ySo{5.0}    % 3S1  (~29038 cm^{-1})
+\def\yPo{0.9}    % 3P0  (~14504 cm^{-1})
+\def\yPz{2.2}    % 3P1  (~14836 cm^{-1})
+\def\ySo{4.4}    % 3S1  (~29038 cm^{-1})
 
 % --- Common styles ---
 \tikzset{
@@ -101,7 +102,7 @@
 \draw[thick]  (\xPo-\lw, \yPo)          -- (\xPo+\lw, \yPo);
 \draw[thick, dashed] (\xPo-\lw, \yPo-\detune) -- (\xPo+\lw, \yPo-\detune);
 \draw[<->, >=stealth, font=\small]
-  (\xPo+\lw, \yPo-\detune) -- (\xPo+\lw, \yPo)
+  (\xPo+\lw+ 0.1, \yPo-\detune) -- (\xPo+\lw + 0.1, \yPo)
   node[midway, right] {$\Delta_3$};
 
 
@@ -113,14 +114,14 @@
 \draw[thick, densely dashed]
   (\xPz-\lw-\offset, \yPz+\dz+\detune) -- (\xPz+\lw-\offset, \yPz+\dz+\detune);
 \draw[<->, >=stealth, font=\small]
-  (\xPz- \offset+\lw + 0.05, \yPz) -- (\xPz- \offset+\lw + 0.05, \yPz+\dz+\detune)
+  (\xPz- \offset+\lw + 0.2, \yPz) -- (\xPz- \offset+\lw + 0.2, \yPz+\dz+\detune)
   node[midway, right] {$\Delta_1$};
 
 % zeeman
 \draw[dashed]
 (\xPz-\lw-\offset, \yPz) -- (\xPz+\lw+\offset, \yPz);
 \draw[<->, >=stealth, font=\small]
-(\xPz-\lw+\offset, \yPz) -- (\xPz-\lw+\offset , \yPz-\dz)
+(\xPz-\lw+\offset-0.1, \yPz) -- (\xPz-\lw+\offset-0.1 , \yPz-\dz)
 node[midway, left] {$\delta_B$};
 
 
@@ -132,7 +133,7 @@ node[midway, left] {$\delta_B$};
 \draw[thick, dashed]
   (\xSo-\lw, \ySo+\detune) -- (\xSo+\lw, \ySo+\detune);
 \draw[<->, >=stealth, font=\small]
-  (\xSo+\lw , \ySo) -- (\xSo+\lw, \ySo+\detune)
+  (\xSo+\lw + 0.1 , \ySo) -- (\xSo+\lw + 0.1, \ySo+\detune)
   node[midway, right] {$\Delta_2$};
 
 
@@ -148,12 +149,12 @@ node[midway, left] {$\delta_B$};
 % Omega_2: 3P1 (m_j = +1) -> 3S1 (m_j = 0, detuned)
 \draw[arrow, c688, font=\small]
   (\xPz-\offset, \yPz+\dz+\detune) -- (\xSo, \ySo+\detune)
-  node[midway, above left] {$\Omega_2,\mathbf{k}_2$};
+  node[pos=0.35, above left=-2pt] {$\Omega_2,\mathbf{k}_2$};
 
 % Omega_3: 3S1 (m_j = 0) -> 3P0 (detuned)
 \draw[arrow, c679, font=\small]
   (\xSo, \ySo+\detune) -- (\xPo, \yPo-\detune)
-  node[midway,  right] {$\Omega_3, \mathbf{k}_3$};
+  node[pos=0.3,  right] {$\Omega_3, \mathbf{k}_3$};
 
 
 
@@ -173,13 +174,13 @@ node[midway, left] {$\delta_B$};
 % (-\lw - \offset, \ySo+\mjoff) rectangle ++(2*\offset + 2*\lw, 0.8);
 
 % % version3
-\draw[gray!5, line width=0pt,
-      fill=gray!15, draw=gray!15]
-  (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + \mjoff);
+% \draw[gray!5, line width=0pt,
+%       fill=gray!15, draw=gray!15]
+%   (\xGnd+\lboff - 0.3, \yGnd - 0.3) rectangle (\xSo+\lboff + 0.3, \ySo + \mjoff);
 
-\draw[blue!5, line width=0pt,
-    fill=gray!15, draw=gray!15]
-(\xGnd+\lboff - 0.3, \ySo+\mjoff) rectangle (\lw + \offset, \ySo+\mjoff + 0.8);
+% \draw[blue!5, line width=0pt,
+%     fill=gray!15, draw=gray!15]
+% (\xGnd+\lboff - 0.3, \ySo+\mjoff) rectangle (\lw + \offset, \ySo+\mjoff + 0.8);
 
 
 % % version4

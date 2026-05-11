@@ -45,8 +45,8 @@ def compile_tex(tex_rel):
 
 
 DPI_IMPORT = 600   # rasterization resolution for input PDFs
-FIG_WIDTH  = 5.0   # total figure width in inches
-FIG_HEIGHT = 8.0
+FIG_WIDTH  = 8.0   # total figure width in inches
+FIG_HEIGHT = 5.0
 PANELS = [
     {"path": str(_FIGURE_DIR / "three_photon_geom.pdf"),    "label": "a)"},
     {"path": str(_FIGURE_DIR / "energy_diagram.pdf"), "label": "b)"},
@@ -84,13 +84,15 @@ def make_figure():
     # fig_height = FIG_WIDTH * sum(heights_px) / target_w
 
     fig = plt.figure(figsize=(FIG_WIDTH, FIG_HEIGHT))
-    gs = gridspec.GridSpec(len(images), 1, height_ratios=heights_px, hspace=0.1)
+    #gs = gridspec.GridSpec(len(images), 1, height_ratios=heights_px, hspace=0.1)
+    gs = gridspec.GridSpec(1,len(images), wspace=0)
 
     for i, (img, panel) in enumerate(zip(images, PANELS)):
         ax = fig.add_subplot(gs[i])
         ax.imshow(img, aspect="equal")
         ax.axis("off")
-        add_panel_label(ax, panel["label"], outside=True)
+        add_panel_label(ax, panel["label"], outside=False)
+
 
     return fig
 
